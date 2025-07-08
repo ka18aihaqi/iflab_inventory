@@ -9,6 +9,16 @@ use App\Http\Controllers\TransferController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 
+Route::get('/debug-vite', function () {
+    $manifestPath = config('vite.manifest_path');
+    
+    return response()->json([
+        'manifest_path' => $manifestPath,
+        'file_exists' => file_exists($manifestPath),
+        'real_path' => realpath($manifestPath),
+    ]);
+});
+
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

@@ -36,6 +36,9 @@ class InventoriesSeeder extends Seeder
                 ['name' => 'LG', 'description' => '1920x1080 - 24 inch', 'stock' => 10],
                 ['name' => 'Samsung', 'description' => '1920x1080 - 27 inch', 'stock' => 10],
             ],
+            'Other Items' => [
+                ['name' => 'Whiteboard', 'description' => '', 'stock' => 10],
+            ],
         ];
 
         foreach ($items as $typeName => $inventoryList) {

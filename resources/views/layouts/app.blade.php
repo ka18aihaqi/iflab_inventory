@@ -34,7 +34,21 @@
         <!-- Nepcha Analytics (nepcha.com) -->
         <!-- Nepcha is a easy-to-use web analytics. No cookies and fully compliant with GDPR, CCPA and PECR. -->
         <script defer data-site="YOUR_DOMAIN_HERE" src="https://api.nepcha.com/js/nepcha-analytics.js"></script>
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        @php
+            $manifestPath = base_path('../public_html/build/manifest.json');
+            $manifest = file_exists($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : [];
+        @endphp
+        
+        @if (!empty($manifest))
+            <link rel="stylesheet" href="{{ asset('build/' . $manifest['resources/css/app.css']['file']) }}">
+            <script type="module" src="{{ asset('build/' . $manifest['resources/js/app.js']['file']) }}"></script>
+        @else
+            <!-- Fallback jika manifest tidak ditemukan -->
+            <link rel="stylesheet" href="{{ asset('build/assets/app.css') }}">
+            <script type="module" src="{{ asset('build/assets/app.js') }}"></script>
+        @endif
+
         <!-- Main Styling -->
         <link rel="stylesheet" href="{{ asset('assets/css/soft-ui-dashboard-tailwind.css') }}?v={{ filemtime(public_path('assets/css/soft-ui-dashboard-tailwind.css')) }}">
     </head>
