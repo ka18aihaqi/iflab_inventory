@@ -144,7 +144,7 @@
                                         </td>
                                         <td class="p-2 align-middle text-center bg-transparent border-b whitespace-nowrap shadow-transparent">
                                             <div class="flex justify-center items-center">
-                                                <img src="{{ asset('storage/qrcodes/QR_TULT-06-01-1.png') }}" alt="QR Code" class="w-12 h-12">
+                                                <img src="{{ asset('storage/' . $allocateHardware->qr_code) }}" alt="QR Code" class="w-12 h-12">
                                             </div>
                                         </td>
                                         <td class="p-2 align-middle text-center bg-transparent border-b whitespace-nowrap shadow-transparent">

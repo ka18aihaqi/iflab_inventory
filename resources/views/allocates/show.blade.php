@@ -101,13 +101,14 @@
 
                     @if(Auth::check())
                         <div class="flex justify-center mt-2">
-                            <a href="{{ asset('storage/qrcodes/QR_TULT-06-01-1.png') }}"
+                            <a href="{{ asset('storage/' . $allocateHardware->qr_code) }}"
                             class="download-btn bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold py-1.5 px-4 rounded-lg transition"
                             download>
                                 <i class="fas fa-download mr-1"></i> Download QR
                             </a>
                         </div>
                     @endif
+
                 </div>
             </div>
         </div>
