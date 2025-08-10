@@ -1,6 +1,6 @@
 <p align="center">
   <a href="#" target="_blank">
-    <img src="/assets/screenshots/logo-iflab" width="300" alt="Sistem Inventaris Logo" />
+    <img src="/public/assets/screenshots/logo-iflab" width="300" alt="Sistem Inventaris Logo" />
   </a>
 </p>
 
@@ -31,15 +31,15 @@ Sistem inventaris modern untuk laboratorium yang memudahkan pengelolaan aset men
 ## 🎨 Screenshot
 
 <p align="center">
-  <img src="/assets/screenshots/dashboard.png" alt="Dashboard" width="600" />
+  <img src="/public/assets/screenshots/dashboard.png" alt="Dashboard" width="600" />
 </p>
 
 <p align="center">
-  <img src="/assets/screenshots/scan-qr.png" alt="Scan QR Code" width="600" />
+  <img src="/public/assets/screenshots/scan-qr.png" alt="Scan QR Code" width="600" />
 </p>
 
 <p align="center">
-  <img src="/assets/screenshots/transfer.png" alt="Transfer Barang" width="600" />
+  <img src="/public/assets/screenshots/transfer.png" alt="Transfer Barang" width="600" />
 </p>
 
 
