@@ -73,8 +73,9 @@
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Item Name</th>
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">From Location</th>
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">To Location</th>
-                                    <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Quantity</th>
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Note</th>
+                                    <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Transferred By</th>
+                                    <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Transferred Date</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -84,8 +85,8 @@
                                             <span class="text-xs font-semibold leading-tight text-slate-400">{{ $transferLogs->firstItem() + $index }}</span>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $transferLog->item_name }}</p>
-                                            <p class="mb-0 text-xs leading-tight text-slate-400">Organization</p>
+                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $transferLog->item->inventory->name }}</p>
+                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $transferLog->item->inventory->description }} - SN: {{ $transferLog->item->serial_number }}</p>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
                                             <span class="text-xs font-semibold leading-tight text-slate-400">{{ $transferLog->from_location }}</span>
@@ -94,10 +95,13 @@
                                             <span class="text-xs font-semibold leading-tight text-slate-400">{{ $transferLog->to_location }}</span>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $transferLog->quantity }}</span>
+                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $transferLog->note }}</span>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $transferLog->note }}</span>
+                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $transferLog->transferredBy->username }}</span>
+                                        </td>
+                                        <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
+                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $transferLog->transferredBy->created_at }}</span>
                                         </td>
                                     </tr>
                                 @empty

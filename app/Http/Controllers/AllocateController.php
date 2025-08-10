@@ -8,10 +8,11 @@ use Endroid\QrCode\QrCode;
 use Illuminate\Http\Request;
 
 use App\Models\AllocateOther;
+use App\Models\InventoryItem;
 use Endroid\QrCode\Logo\Logo;
 use Barryvdh\DomPDF\Facade\Pdf;
-use App\Models\AllocateHardware;
 
+use App\Models\AllocateHardware;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\Storage;
 
@@ -30,19 +31,23 @@ class AllocateController extends Controller
         if ($request->filled('location')) {
             $selectedLocation = Location::find($request->location);
 
-            $allocateHardwares = AllocateHardware::with('location')
-                ->where('location_id', $request->location)
-                ->orderBy('desk_number', 'asc')
-                ->paginate(5, ['*'], 'hardware_page');
+            // Pastikan location ditemukan
+            if ($selectedLocation) {
+                $allocateHardwares = AllocateHardware::with('location')
+                    ->where('location_id', $selectedLocation->id)
+                    ->orderBy('desk_number', 'asc')
+                    ->paginate(5, ['*'], 'hardware_page');
 
-            $allocateOthers = AllocateOther::with('location')
-                ->where('location_id', $request->location)
-                ->orderBy('id', 'asc')
-                ->paginate(5, ['*'], 'other_page');
+                $allocateOthers = AllocateOther::with('location')
+                    ->where('location_id', $selectedLocation->id)
+                    ->orderBy('id', 'asc')
+                    ->paginate(5, ['*'], 'other_page');
+            }
         }
 
         return view('allocates.index', compact('allocateHardwares', 'allocateOthers', 'locations', 'selectedLocation'));
     }
+
 
     public function show(AllocateHardware $allocateHardware)
     {
@@ -52,17 +57,24 @@ class AllocateController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function createHardware()
     {
-        return view('allocates.create', [
+        return view('allocates.create-hardware', [
             'locations' => Location::all(),
-            'computers' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Computer'))->get(),
-            'diskDrives' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Disk Drive'))->get(),
-            'processors' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Processor'))->get(),
-            'vgaCards' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'VGA'))->get(),
-            'rams' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'RAM'))->get(),
-            'monitors' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Monitor'))->get(),
-            'others' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Other Items'))->get(),
+            'computers' => InventoryItem::where('status_allocate', 'available')->whereHas('inventory', fn($q) => $q->where('category', 'Computer'))->get(),
+            'diskDrives' => InventoryItem::where('status_allocate', 'available')->whereHas('inventory', fn($q) => $q->where('category', 'Disk Drive'))->get(),
+            'processors' => InventoryItem::where('status_allocate', 'available')->whereHas('inventory', fn($q) => $q->where('category', 'Processor'))->get(),
+            'vgaCards' => InventoryItem::where('status_allocate', 'available')->whereHas('inventory', fn($q) => $q->where('category', 'VGA'))->get(),
+            'rams' => InventoryItem::where('status_allocate', 'available')->whereHas('inventory', fn($q) => $q->where('category', 'RAM'))->get(),
+            'monitors' => InventoryItem::where('status_allocate', 'available')->whereHas('inventory', fn($q) => $q->where('category', 'Monitor'))->get(),
+        ]);
+    }
+
+    public function createOther()
+    {
+        return view('allocates.create-other', [
+            'locations' => Location::all(),
+            'others' => InventoryItem::where('status_allocate', 'available')->whereHas('inventory', fn($q) => $q->where('category', 'Other'))->get(),
         ]);
     }
 
@@ -74,16 +86,21 @@ class AllocateController extends Controller
         $validated = $request->validate([
             'location_id' => 'required|exists:locations,id',
             'desk_number' => 'nullable|integer|min:1',
-            'computer_id' => 'nullable|exists:inventories,id',
-            'disk_drive_1_id' => 'nullable|exists:inventories,id',
-            'disk_drive_2_id' => 'nullable|exists:inventories,id',
-            'processor_id' => 'nullable|exists:inventories,id',
-            'vga_card_id' => 'nullable|exists:inventories,id',
-            'ram_id' => 'nullable|exists:inventories,id',
-            'monitor_id' => 'nullable|exists:inventories,id',
+            'computer_id' => 'nullable|exists:inventory_items,id',
+            'disk_drive_1_id' => 'nullable|exists:inventory_items,id',
+            'disk_drive_2_id' => 'nullable|exists:inventory_items,id',
+            'processor_id' => 'nullable|exists:inventory_items,id',
+            'vga_card_id' => 'nullable|exists:inventory_items,id',
+            'ram_id' => 'nullable|exists:inventory_items,id',
+            'monitor_id' => 'nullable|exists:inventory_items,id',
             'year_approx' => 'nullable|integer|min:2000|max:' . date('Y'),
             'ups_status' => 'nullable|in:Active,Inactive',
         ]);
+
+        // Cek disk drive 1 dan 2 tidak boleh sama
+        if ($validated['disk_drive_1_id'] && $validated['disk_drive_2_id'] && $validated['disk_drive_1_id'] == $validated['disk_drive_2_id']) {
+            return back()->with('error', 'Disk Drive 2 tidak boleh sama dengan Disk Drive 1')->withInput();
+        }
 
         // Cek kombinasi unik lokasi + nomor meja
         $exists = AllocateHardware::where('location_id', $validated['location_id'])
@@ -91,30 +108,32 @@ class AllocateController extends Controller
             ->exists();
 
         if ($exists) {
-            session()->flash('error', 'Desk number already used in this location.');
-            return back()->withInput();
+            return back()->with('error', 'Desk number already used in this location.')->withInput();
         }
 
-        $inventoryFields = [
+        $inventoryItemFields = [
             'computer_id', 'disk_drive_1_id', 'disk_drive_2_id',
             'processor_id', 'vga_card_id', 'ram_id', 'monitor_id'
         ];
 
-        // Check Stock
-            foreach ($inventoryFields as $field) {
-                if (!empty($validated[$field])) {
-                    $inventory = Inventory::find($validated[$field]);
-
-                    if (!$inventory || $inventory->stock <= 0) {
-                        return back()->with('error', 'One of the components is out of stock and cannot be used.')->withInput();
-                    }
-
+        // Cek apakah inventory items valid dan belum dialokasikan
+        foreach ($inventoryItemFields as $field) {
+            if (!empty($validated[$field])) {
+                $item = InventoryItem::find($validated[$field]);
+                if (!$item) {
+                    return back()->with('error', "Selected item for {$field} does not exist.")->withInput();
+                }
+                // Ganti pengecekan allocated ke status_allocate
+                if ($item->status_allocate === 'allocated') {
+                    return back()->with('error', "Selected item for {$field} is already allocated.")->withInput();
                 }
             }
+        }
 
+        // Simpan allocate hardware
         $allocated = AllocateHardware::create([
             'location_id'      => $validated['location_id'],
-            'desk_number'      => $validated['desk_number'],
+            'desk_number'      => $validated['desk_number'] ?? null,
             'computer_id'      => $validated['computer_id'] ?? null,
             'disk_drive_1_id'  => $validated['disk_drive_1_id'] ?? null,
             'disk_drive_2_id'  => $validated['disk_drive_2_id'] ?? null,
@@ -125,87 +144,67 @@ class AllocateController extends Controller
             'year_approx'      => $validated['year_approx'] ?? null,
             'ups_status'       => $validated['ups_status'] ?? null,
             'qr_code'          => null,
+            'updated_by'       => auth()->id(),
         ]);
 
-        // Reduce Stock
-            foreach ($inventoryFields as $field) {
-                if (!empty($validated[$field])) {
-                    Inventory::where('id', $validated[$field])->decrement('stock');
-                }
+        // Tandai inventory_items jadi allocated
+        foreach ($inventoryItemFields as $field) {
+            if (!empty($validated[$field])) {
+                InventoryItem::where('id', $validated[$field])->update(['status_allocate' => 'allocated']);
             }
+        }
 
-        // QR Code
-            $qrText = route('allocates.hardware.show', $allocated->id);
+        // Generate QR Code (sama seperti sebelumnya)
+        $qrText = route('allocates.hardware.show', $allocated->id);
+        $locationName = str_replace(' ', '', strtoupper($allocated->location->name));
+        $deskNumber = $allocated->desk_number;
+        $qrFileName = 'QR_' . $locationName . '-' . $deskNumber . '.png';
 
-            $locationName = str_replace(' ', '', strtoupper($allocated->location->name));
-            $deskNumber = $allocated->desk_number;
-            $qrFileName = 'QR_' . $locationName . '-' . $deskNumber . '.png';
+        $qrCode = new QrCode($qrText);
+        $logo = new Logo(public_path('assets/img/logo-iflab.png'), 130);
+        $writer = new PngWriter();
+        $qrResult = $writer->write($qrCode, $logo);
+        Storage::disk('public')->put("qrcodes/{$qrFileName}", $qrResult->getString());
 
-            $qrCode = new QrCode($qrText);
-
-            $logo = new Logo(public_path('assets/img/logo-iflab.png'), 130);
-
-            $writer = new PngWriter();
-            $qrResult = $writer->write($qrCode, $logo);
-
-            Storage::disk('public')->put("qrcodes/{$qrFileName}", $qrResult->getString());
-
-            $allocated->update([
-                'qr_code' => "qrcodes/{$qrFileName}"
-            ]);
+        $allocated->update([
+            'qr_code' => "qrcodes/{$qrFileName}"
+        ]);
 
         return redirect()->route('allocates.index', [
             'location' => $allocated->location_id
-        ])->with('success', "<strong>Computer Components</strong> has been successfully allocated to <strong>{$allocated->location->name}, Desk No. <strong>{$allocated->desk_number}</strong>.");
+        ])->with('success', "<strong>Computer Components</strong> successfully allocated to <strong>{$allocated->location->name}, Desk No. <strong>{$allocated->desk_number}</strong>.");
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function storeOther(Request $request)
     {
+        // dd($request->all());
         $validated = $request->validate([
-            'location_id'  => 'required|exists:locations,id',
-            'others_id'    => 'required|exists:inventories,id',
-            'quantity'     => 'required|integer|min:1',
-            'description'  => 'nullable|string|max:255',
+            'location_id' => 'required|exists:locations,id',
+            'item_id' => 'required|exists:inventory_items,id',
+            'description' => 'nullable|string|max:255',
         ]);
 
-        // Ambil data inventory
-        $inventory = Inventory::find($validated['others_id']);
+        $item = InventoryItem::where('id', $validated['item_id'])
+                ->where('status_allocate', 'available')
+                ->first();
 
-        if ($inventory->stock < $validated['quantity']) {
-            return back()->with('error', 'Not enough stock for the selected item.')->withInput();
+        if (!$item) {
+            return back()->with('error', 'Selected item is not available or already allocated.')->withInput();
         }
 
-        // Cek apakah alokasi untuk location_id + others_id sudah ada
-        $existingAllocation = AllocateOther::where('location_id', $validated['location_id'])
-            ->where('others_id', $validated['others_id'])
-            ->first();
+        // Tandai jadi allocated
+        $item->update(['status_allocate' => 'allocated']);
 
-        if ($existingAllocation) {
-            // Tambah quantity
-            $existingAllocation->increment('quantity', $validated['quantity']);
 
-            // Jika ada deskripsi baru, update juga deskripsinya
-            if (!empty($validated['description'])) {
-                $existingAllocation->update(['description' => $validated['description']]);
-            }
-        } else {
-            // Buat alokasi baru
-            $existingAllocation = AllocateOther::create([
-                'location_id' => $validated['location_id'],
-                'others_id'   => $validated['others_id'],
-                'quantity'    => $validated['quantity'],
-                'description' => $validated['description'],
-            ]);
-        }
-
-        // Kurangi stok
-        $inventory->decrement('stock', $validated['quantity']);
+        // Buat alokasi
+        AllocateOther::create([
+            'location_id' => $validated['location_id'],
+            'item_id' => $item->id,
+            'description' => $validated['description'] ?? null,
+        ]);
 
         return redirect()->route('allocates.index', ['location' => $validated['location_id']])
-                        ->with('success', "<strong>{$existingAllocation->others->name}</strong> has been successfully allocated to <strong>{$existingAllocation->location->name}</strong>.");
+                        ->with('success', "Item <strong>{$item->inventory->name}</strong> successfully allocated.");
     }
 
     /**
@@ -216,12 +215,37 @@ class AllocateController extends Controller
         return view('allocates.edit-hardware', [
             'allocateHardware' => $allocateHardware,
             'locations' => Location::all(),
-            'computers' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Computer'))->get(),
-            'diskDrives' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Disk Drive'))->get(),
-            'processors' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Processor'))->get(),
-            'vgaCards' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'VGA'))->get(),
-            'rams' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'RAM'))->get(),
-            'monitors' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Monitor'))->get(),
+
+            'computers' => InventoryItem::where(function($query) use ($allocateHardware) {
+                $query->where('status_allocate', 'available')
+                    ->orWhere('id', $allocateHardware->computer_id);
+            })->whereHas('inventory', fn($q) => $q->where('category', 'Computer'))->get(),
+
+            'diskDrives' => InventoryItem::where(function($query) use ($allocateHardware) {
+                $query->where('status_allocate', 'available')
+                    ->orWhere('id', $allocateHardware->disk_drive_1_id)
+                    ->orWhere('id', $allocateHardware->disk_drive_2_id);
+            })->whereHas('inventory', fn($q) => $q->where('category', 'Disk Drive'))->get(),
+
+            'processors' => InventoryItem::where(function($query) use ($allocateHardware) {
+                $query->where('status_allocate', 'available')
+                    ->orWhere('id', $allocateHardware->processor_id);
+            })->whereHas('inventory', fn($q) => $q->where('category', 'Processor'))->get(),
+
+            'vgaCards' => InventoryItem::where(function($query) use ($allocateHardware) {
+                $query->where('status_allocate', 'available')
+                    ->orWhere('id', $allocateHardware->vga_card_id);
+            })->whereHas('inventory', fn($q) => $q->where('category', 'VGA'))->get(),
+
+            'rams' => InventoryItem::where(function($query) use ($allocateHardware) {
+                $query->where('status_allocate', 'available')
+                    ->orWhere('id', $allocateHardware->ram_id);
+            })->whereHas('inventory', fn($q) => $q->where('category', 'RAM'))->get(),
+
+            'monitors' => InventoryItem::where(function($query) use ($allocateHardware) {
+                $query->where('status_allocate', 'available')
+                    ->orWhere('id', $allocateHardware->monitor_id);
+            })->whereHas('inventory', fn($q) => $q->where('category', 'Monitor'))->get(),
         ]);
     }
 
@@ -230,7 +254,11 @@ class AllocateController extends Controller
         return view('allocates.edit-other', [
             'allocateOther' => $allocateOther,
             'locations' => Location::all(),
-            'others' => Inventory::whereHas('itemType', fn($q) => $q->where('name', 'Other Items'))->get(),
+
+            'others' => InventoryItem::where(function($query) use ($allocateOther) {
+                $query->where('status_allocate', 'available')
+                    ->orWhere('id', $allocateOther->item_id); // ini penting supaya item yang sudah dialokasikan tetap muncul
+            })->whereHas('inventory', fn($q) => $q->where('category', 'Other'))->get(),
         ]);
     }
     
@@ -242,16 +270,21 @@ class AllocateController extends Controller
         $validated = $request->validate([
             'location_id' => 'required|exists:locations,id',
             'desk_number' => 'nullable|integer|min:1',
-            'computer_id' => 'nullable|exists:inventories,id',
-            'disk_drive_1_id' => 'nullable|exists:inventories,id',
-            'disk_drive_2_id' => 'nullable|exists:inventories,id',
-            'processor_id' => 'nullable|exists:inventories,id',
-            'vga_card_id' => 'nullable|exists:inventories,id',
-            'ram_id' => 'nullable|exists:inventories,id',
-            'monitor_id' => 'nullable|exists:inventories,id',
+            'computer_id' => 'nullable|exists:inventory_items,id',
+            'disk_drive_1_id' => 'nullable|exists:inventory_items,id',
+            'disk_drive_2_id' => 'nullable|exists:inventory_items,id',
+            'processor_id' => 'nullable|exists:inventory_items,id',
+            'vga_card_id' => 'nullable|exists:inventory_items,id',
+            'ram_id' => 'nullable|exists:inventory_items,id',
+            'monitor_id' => 'nullable|exists:inventory_items,id',
             'year_approx' => 'nullable|integer|min:2000|max:' . date('Y'),
             'ups_status' => 'nullable|in:Active,Inactive',
         ]);
+
+        // Cek disk drive 1 dan 2 tidak boleh sama
+        if ($validated['disk_drive_1_id'] && $validated['disk_drive_2_id'] && $validated['disk_drive_1_id'] == $validated['disk_drive_2_id']) {
+            return back()->with('error', 'Disk Drive 2 tidak boleh sama dengan Disk Drive 1')->withInput();
+        }
 
         // Cek jika kombinasi lokasi + desk number sudah digunakan oleh alokasi lain
         $exists = AllocateHardware::where('location_id', $validated['location_id'])
@@ -263,99 +296,104 @@ class AllocateController extends Controller
             return back()->with('error', 'Desk number already used in this location.')->withInput();
         }
 
-        // Daftar field komponen
+        // Simpan item lama untuk cek perubahan status_allocate
         $inventoryFields = [
             'computer_id', 'disk_drive_1_id', 'disk_drive_2_id',
             'processor_id', 'vga_card_id', 'ram_id', 'monitor_id'
         ];
 
-        // Loop untuk cek dan update stok
+        $oldItems = [];
         foreach ($inventoryFields as $field) {
-            $oldValue = $allocateHardware->$field;
-            $newValue = $validated[$field] ?? null;
+            $oldItems[$field] = $allocateHardware->$field;
+        }
 
-            if ($oldValue != $newValue) {
-                // Kembalikan stok komponen lama
-                if ($oldValue) {
-                    Inventory::where('id', $oldValue)->increment('stock');
-                }
+        // Update data alokasi hardware
+        $allocateHardware->update($validated);
 
-                // Kurangi stok komponen baru jika tersedia
-                if ($newValue) {
-                    $inventory = Inventory::find($newValue);
-                    if (!$inventory || $inventory->stock <= 0) {
-                        return back()->with('error', "One of the components is out of stock and cannot be used.")->withInput();
-                    }
-                    $inventory->decrement('stock');
-                }
+        // Update status_allocate untuk item lama yang sudah tidak dipakai lagi jadi 'available'
+        foreach ($inventoryFields as $field) {
+            $oldItemId = $oldItems[$field];
+            $newItemId = $validated[$field] ?? null;
+
+            if ($oldItemId && $oldItemId != $newItemId) {
+                InventoryItem::where('id', $oldItemId)->update(['status_allocate' => 'available']);
             }
         }
 
-        // Simpan lokasi dan desk number lama
+        // Update status_allocate untuk item baru jadi 'allocated'
+        foreach ($inventoryFields as $field) {
+            $newItemId = $validated[$field] ?? null;
+
+            if ($newItemId) {
+                InventoryItem::where('id', $newItemId)->update(['status_allocate' => 'allocated']);
+            }
+        }
+
+        // Rename QR Code jika lokasi atau desk_number berubah
         $oldLocation = $allocateHardware->location->name;
         $oldDesk = $allocateHardware->desk_number;
 
-        // Update data
-        $allocateHardware->update($validated);
-
-        // Bandingkan apakah lokasi atau desk number berubah
         $newLocation = Location::find($validated['location_id'])->name;
         $newDesk = $validated['desk_number'];
 
-        if ($oldLocation !== $newLocation || $oldDesk != $newDesk) {
+        if (($oldLocation !== $newLocation || $oldDesk != $newDesk) && $allocateHardware->qr_code) {
             $oldFileName = $allocateHardware->qr_code;
             $newFileName = 'qrcodes/QR_' . strtoupper(str_replace(' ', '', $newLocation)) . '-' . $newDesk . '.png';
 
-            if ($oldFileName && Storage::disk('public')->exists($oldFileName)) {
+            if (Storage::disk('public')->exists($oldFileName)) {
                 Storage::disk('public')->move($oldFileName, $newFileName);
                 $allocateHardware->update(['qr_code' => $newFileName]);
             }
         }
 
+        $allocateHardware->update(array_merge(
+            $validated,
+            ['updated_by' => auth()->id()]
+        ));
+
         return redirect()->route('allocates.index', [
             'location' => $allocateHardware->location_id
         ])->with('success', "<strong>Computer Components</strong> has been successfully updated at <strong>{$allocateHardware->location->name}, Desk No. {$allocateHardware->desk_number}</strong>.");
-
     }
 
     public function updateOther(Request $request, AllocateOther $allocateOther)
     {
         $validated = $request->validate([
             'location_id'  => 'required|exists:locations,id',
-            'others_id'    => 'required|exists:inventories,id',
-            'quantity'     => 'required|integer|min:1',
+            'item_id'      => 'required|exists:inventory_items,id',
             'description'  => 'nullable|string|max:255',
         ]);
 
-        $oldInventory = $allocateOther->others; // relasi ke inventory lama
-        $oldQuantity = $allocateOther->quantity;
+        // Jika item baru sama dengan yang lama, hanya update lokasi & deskripsi saja
+        if ($allocateOther->item_id != $validated['item_id']) {
+            // Cari item baru yang statusnya available
+            $newItem = InventoryItem::where('id', $validated['item_id'])
+                        ->where('status_allocate', 'available')
+                        ->first();
 
-        // Kembalikan stok lama (rollback dulu)
-        $oldInventory->increment('stock', $oldQuantity);
+            if (!$newItem) {
+                return back()->with('error', 'Selected item is not available or already allocated.')->withInput();
+            }
 
-        // Ambil inventory baru
-        $newInventory = Inventory::find($validated['others_id']);
+            // Bebaskan item lama
+            $oldItem = $allocateOther->item;
+            $oldItem->update(['status_allocate' => 'available']);
 
-        // Cek stok inventory baru cukup atau tidak
-        if ($newInventory->stock < $validated['quantity']) {
-            // Jika tidak cukup, kembalikan stok lama ke posisi sebelumnya
-            $oldInventory->decrement('stock', $oldQuantity);
-            return back()->with('error', 'Not enough stock for the selected item.')->withInput();
+            // Tandai item baru jadi allocated
+            $newItem->update(['status_allocate' => 'allocated']);
+
+            // Update item_id di allocate_other
+            $allocateOther->item_id = $newItem->id;
         }
 
-        // Update data alokasi
-        $allocateOther->update([
-            'location_id' => $validated['location_id'],
-            'others_id'   => $validated['others_id'],
-            'quantity'    => $validated['quantity'],
-            'description' => $validated['description'],
-        ]);
+        // Update lokasi dan deskripsi
+        $allocateOther->location_id = $validated['location_id'];
+        $allocateOther->description = $validated['description'] ?? null;
 
-        // Kurangi stok inventory baru
-        $newInventory->decrement('stock', $validated['quantity']);
+        $allocateOther->save();
 
         return redirect()->route('allocates.index', ['location' => $validated['location_id']])
-                        ->with('success', "<strong>{$allocateOther->others->name}</strong> has been successfully updated in <strong>{$allocateOther->location->name}</strong>.");
+            ->with('success', "Allocation has been successfully updated.");
     }
 
     /**
@@ -363,16 +401,19 @@ class AllocateController extends Controller
      */
     public function destroyHardware(AllocateHardware $allocateHardware)
     {
-        // Daftar field komponen
-        $inventoryFields = [
+        // Daftar field komponen yang merujuk ke inventory_items (per unit)
+        $inventoryItemFields = [
             'computer_id', 'disk_drive_1_id', 'disk_drive_2_id',
             'processor_id', 'vga_card_id', 'ram_id', 'monitor_id'
         ];
 
-        // Kembalikan stok semua komponen yang terpakai
-        foreach ($inventoryFields as $field) {
-            if (!empty($allocateHardware->$field)) {
-                Inventory::where('id', $allocateHardware->$field)->increment('stock');
+        // Tandai ulang setiap inventory_item yang dialokasikan jadi 'available'
+        foreach ($inventoryItemFields as $field) {
+            if ($allocateHardware->$field) {
+                $item = InventoryItem::find($allocateHardware->$field);
+                if ($item) {
+                    $item->update(['status_allocate' => 'available']);
+                }
             }
         }
 
@@ -381,40 +422,43 @@ class AllocateController extends Controller
             Storage::disk('public')->delete($allocateHardware->qr_code);
         }
 
+        $locationName = $allocateHardware->location->name ?? 'Unknown Location';
+        $deskNumber = $allocateHardware->desk_number ?? '-';
+
         // Hapus data alokasi
         $allocateHardware->delete();
 
         return redirect()->route('allocates.index', [
             'location' => $allocateHardware->location_id
-        ])->with('success', "Deleted <strong>Computer Components</strong> from <strong>{$allocateHardware->location->name}</strong>, Desk No. <strong>{$allocateHardware->desk_number}</strong>. Stock has been restored.");
+        ])->with('success', "Deleted <strong>Computer Components</strong> from <strong>{$locationName}</strong>, Desk No. <strong>{$deskNumber}</strong>. Inventory items are now available.");
     }
 
     public function destroyOther(AllocateOther $allocateOther)
     {
-        // Ambil data inventory terkait
-        $inventory = Inventory::find($allocateOther->others_id);
+        // Ambil inventory item yang dialokasikan
+        $item = $allocateOther->item; // pastikan di model AllocateOther ada relasi item()
 
-        // Jika inventory masih ada, kembalikan stok
-        if ($inventory) {
-            $inventory->increment('stock', $allocateOther->quantity);
+        if ($item) {
+            // Tandai item kembali jadi 'available'
+            $item->update(['status_allocate' => 'available']);
         }
 
         // Hapus data alokasi
         $allocateOther->delete();
 
         return redirect()->route('allocates.index', ['location' => $allocateOther->location_id])
-                        ->with('success', "Deleted <strong>{$allocateOther->others->name}</strong> from <strong>{$allocateOther->location->name}</strong>. Stock has been restored.");
+                        ->with('success', "Deleted <strong>{$allocateOther->item->inventory->name}</strong> from <strong>{$allocateOther->location->name}</strong>. Item is now available again.");
     }
 
     public function exportPdf(Request $request)
     {
         $locationId = $request->location;
 
-        if (!$locationId || !Location::find($locationId)) {
+        $location = Location::find($locationId);
+        if (!$location) {
             return redirect()->route('allocates.index')->with('error', 'Location not found.');
         }
 
-        $location = Location::find($locationId);
         $allocateHardware = AllocateHardware::with([
             'computer', 'processor', 'diskDrive1', 'diskDrive2',
             'vgaCard', 'ram', 'monitor'
@@ -423,7 +467,7 @@ class AllocateController extends Controller
         ->get();
 
         $allocateOther = AllocateOther::with([
-            'others'
+            'item.inventory' // load item dan inventory terkait untuk detail nama dll
         ])
         ->where('location_id', $locationId)
         ->get();

@@ -28,7 +28,7 @@
                         <a href="{{ route('inventories.index') }}" class="text-white hover:text-slate-800 text-base transition-transform transform hover:scale-110 mr-4" title="Back">
                             <i class="fas fa-arrow-left mb-2"></i>
                         </a>
-                        <h6 class="text-lg font-semibold text-white">{{ $inventory->itemType->name }}</h6>
+                        <h6 class="text-lg font-semibold text-white">{{ $inventory->category }}</h6>
                     </div>
                 </div>
 
@@ -39,7 +39,7 @@
                             @method('PUT')
 
                             <!-- Form Khusus Berdasarkan Item Type -->
-                            @switch($inventory->itemType->name)
+                            @switch($inventory->category)
                                 @case('Computer')
                                     @include('inventories.partials.edit-form-computer', ['inventory' => $inventory])
                                     @break

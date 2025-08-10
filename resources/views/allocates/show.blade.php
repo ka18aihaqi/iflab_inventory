@@ -27,7 +27,7 @@
                             <div class="flex flex-col">
                                 <h6 class="mb-1 leading-normal text-sm text-slate-700">Computer</h6>
                                 <span class="leading-tight text-xs">
-                                    {{ $allocateHardware->computer->name ?? '-' }} {{ $allocateHardware->computer->description ?? '-' }}
+                                    {{ $allocateHardware->computer->inventory->name ?? '-' }} {{ $allocateHardware->computer->inventory->description ?? '-' }}
                                 </span>
                             </div>
                         </div>
@@ -36,7 +36,7 @@
                             <div class="flex flex-col">
                                 <h6 class="mb-1 leading-normal text-sm text-slate-700">Processor</h6>
                                 <span class="leading-tight text-xs">
-                                    {{ $allocateHardware->processor->name ?? '-' }} {{ $allocateHardware->processor->description ?? '-' }}
+                                    {{ $allocateHardware->processor->inventory->name ?? '-' }} {{ $allocateHardware->processor->inventory->description ?? '-' }}
                                 </span>
                             </div>
                         </div>
@@ -49,7 +49,7 @@
                             <div class="flex flex-col">
                                 <h6 class="mb-1 leading-normal text-sm text-slate-700">Disk Drive 1</h6>
                                 <span class="leading-tight text-xs">
-                                    {{ $allocateHardware->diskDrive1->name ?? '-' }} {{ $allocateHardware->diskDrive1->description ?? '-' }}
+                                    {{ $allocateHardware->diskDrive1->inventory->name ?? '-' }} {{ $allocateHardware->diskDrive1->inventory->description ?? '-' }}
                                 </span>
                             </div>
                         </div>
@@ -58,7 +58,7 @@
                             <div class="flex flex-col">
                                 <h6 class="mb-1 leading-normal text-sm text-slate-700">Disk Drive 2</h6>
                                 <span class="leading-tight text-xs">
-                                    {{ $allocateHardware->diskDrive2->name ?? '-' }} {{ $allocateHardware->diskDrive2->description ?? '-' }}
+                                    {{ $allocateHardware->diskDrive2->inventory->name ?? '-' }} {{ $allocateHardware->diskDrive2->inventory->description ?? '-' }}
                                 </span>
                             </div>
                         </div>
@@ -71,7 +71,7 @@
                             <div class="flex flex-col">
                                 <h6 class="mb-1 leading-normal text-sm text-slate-700">VGA</h6>
                                 <span class="leading-tight text-xs">
-                                    {{ $allocateHardware->vgaCard->name ?? '-' }} {{ $allocateHardware->vgaCard->description ?? '-' }}
+                                    {{ $allocateHardware->vgaCard->inventory->name ?? '-' }} {{ $allocateHardware->vgaCard->inventory->description ?? '-' }}
                                 </span>
                             </div>
                         </div>
@@ -80,7 +80,7 @@
                             <div class="flex flex-col">
                                 <h6 class="mb-1 leading-normal text-sm text-slate-700">RAM</h6>
                                 <span class="leading-tight text-xs">
-                                    {{ $allocateHardware->ram->name ?? '-' }} {{ $allocateHardware->ram->description ?? '-' }}
+                                    {{ $allocateHardware->ram->inventory->name ?? '-' }} {{ $allocateHardware->ram->inventory->description ?? '-' }}
                                 </span>
                             </div>
                         </div>
@@ -93,14 +93,19 @@
                             <div class="flex flex-col">
                                 <h6 class="mb-1 leading-normal text-sm text-slate-700">Monitor</h6>
                                 <span class="leading-tight text-xs">
-                                    {{ $allocateHardware->monitor->name ?? '-' }} {{ $allocateHardware->monitor->description ?? '-' }}
+                                    {{ $allocateHardware->monitor->inventory->name ?? '-' }} {{ $allocateHardware->monitor->inventory->description ?? '-' }}
                                 </span>
                             </div>
                         </div>
                     </div>
 
                     @if(Auth::check())
-                        <div class="flex justify-center mt-2">
+                        <div class="flex justify-between mt-2 gap-2">
+                            {{-- <a href="{{ route('allocates.hardware.edit', $allocateHardware->id) }}"
+                            class="update-btn bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-1.5 px-4 rounded-lg transition">
+                                <i class="fas fa-edit mr-1"></i> Update
+                            </a> --}}
+
                             <a href="{{ asset('storage/' . $allocateHardware->qr_code) }}"
                             class="download-btn bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold py-1.5 px-4 rounded-lg transition"
                             download>

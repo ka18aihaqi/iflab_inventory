@@ -64,6 +64,15 @@
                 Transfers
             </x-nav-link>
 
+            <x-nav-link :href="route('auditlogs.index')" :active="request()->routeIs('auditlogs.*')">
+                <x-slot:icon>
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 10H6.83l3.58-3.59L9 5l-7 7 7 7 1.41-1.41L6.83 14H20v-2zm-9-5v2h8v2h-8v2l-3-3 3-3z"/>
+                    </svg>
+                </x-slot:icon>
+                Audit Logs
+            </x-nav-link>
+
             <li class="w-full mt-4">
                 <h6 class="pl-6 ml-2 text-xs font-bold leading-tight uppercase opacity-60">Account pages</h6>
             </li>

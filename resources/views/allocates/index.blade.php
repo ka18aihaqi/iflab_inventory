@@ -24,21 +24,9 @@
                         </script>
                     @endif
 
-                    <div class="flex items-center justify-between w-full">
-                        <!-- Kiri: Add + PDF -->
-                        <div class="flex items-center space-x-2 w-1/3">
-                            <a href="{{ route('allocates.create') }}" class="add-btn mr-2">
-                                <i class="fas fa-plus text-sm mr-1"></i> Add
-                            </a>
-                            @if(request()->filled('location'))
-                                <a href="{{ route('allocates.exportPdf', ['location' => request('location')]) }}" class="download-btn">
-                                    <i class="fas fa-file-pdf text-sm mr-1"></i> PDF
-                                </a>
-                            @endif
-                        </div>
-
+                    <div class="flex items-center justify-center w-full">
                         <!-- Tengah: Filter Lokasi -->
-                        <div class="flex justify-center w-1/3">
+                        <div class="flex justify-center w-1/3 mr-2">
                             <form method="GET" action="{{ route('allocates.index') }}" class="flex items-center space-x-2">
                                 <select name="location" class="filter-select" onchange="this.form.submit()">
                                     <option value="">Select Location</option>
@@ -49,6 +37,15 @@
                                     @endforeach
                                 </select>
                             </form>
+                        </div>
+
+                        <!-- Kiri: Add + PDF -->
+                        <div class="flex items-center space-x-2 w-1/3">
+                            @if(request()->filled('location'))
+                                <a href="{{ route('allocates.exportPdf', ['location' => request('location')]) }}" class="download-btn">
+                                    <i class="fas fa-file-pdf text-sm mr-1"></i> PDF
+                                </a>
+                            @endif
                         </div>
 
                         <!-- Kanan: Search -->
@@ -77,10 +74,11 @@
         <div class="flex flex-wrap -mx-3">
             <div class="flex-none w-full max-w-full px-3">
                 <div class="relative flex flex-col min-w-0 mb-6 break-words bg-white border-0 border-transparent border-solid shadow-soft-xl rounded-2xl bg-clip-border">
-                    <div class="p-6 pb-2 mb-0 bg-gradient-to-r from-blue-700 to-yellow-400 border-b-0 border-b-solid rounded-t-2xl border-b-transparent text-center">
-                        <h6 class="text-white">
-                            Allocated Hardware
-                        </h6>
+                    <div class="p-6 pb-0 mb-0 bg-white border-b-0 border-b-solid rounded-t-2xl border-b-transparent flex items-center justify-between">
+                        <h6 class="m-0">Hardware</h6>
+                        <a href="{{ route('allocates.hardware.create') }}" class="add-btn flex items-center text-sm font-semibold text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-plus mr-1"></i> Add
+                        </a>
                     </div>
 
                     <div class="flex-auto px-0 pt-0 pb-2">
@@ -98,6 +96,7 @@
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Monitor</th>
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Year Approx</th>
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">UPS Status</th>
+                                    <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Updated By</th>
                                     <th class="px-2 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">QR Code</th>
                                     <th class="px-2 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Action</th>
                                 </tr>
@@ -109,38 +108,41 @@
                                             <span class="text-xs font-semibold leading-tight text-slate-400">{{ $allocateHardware->desk_number }}</span>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->computer->name ?? '-' }}</p>
-                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->computer->description ?? '-' }}</p>
+                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->computer->inventory->name ?? '-' }}</p>
+                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->computer->inventory->description ?? '-' }}</p>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->diskDrive1->name ?? '-' }}</p>
-                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->diskDrive1->description ?? '-' }}</p>
+                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->diskDrive1->inventory->name ?? '-' }}</p>
+                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->diskDrive1->inventory->description ?? '-' }}</p>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->diskDrive2->name ?? '-' }}</p>
-                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->diskDrive2->description ?? '-' }}</p>
+                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->diskDrive2->inventory->name ?? '-' }}</p>
+                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->diskDrive2->inventory->description ?? '-' }}</p>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->processor->name ?? '-' }}</p>
-                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->processor->description ?? '-' }}</p>
+                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->processor->inventory->name ?? '-' }}</p>
+                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->processor->inventory->description ?? '-' }}</p>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->vgaCard->name ?? '-' }}</p>
-                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->vgaCard->description ?? '-' }}</p>
+                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->vgaCard->inventory->name ?? '-' }}</p>
+                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->vgaCard->inventory->description ?? '-' }}</p>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->ram->name ?? '-' }}</p>
-                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->ram->description ?? '-' }}</p>
+                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->ram->inventory->name ?? '-' }}</p>
+                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->ram->inventory->description ?? '-' }}</p>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->monitor->name ?? '-' }}</p>
-                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->monitor->description ?? '-' }}</p>
+                                            <p class="mb-0 text-xs font-semibold leading-tight">{{ $allocateHardware->monitor->inventory->name ?? '-' }}</p>
+                                            <p class="mb-0 text-xs leading-tight text-slate-400">{{ $allocateHardware->monitor->inventory->description ?? '-' }}</p>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
                                             <span class="text-xs font-semibold leading-tight text-slate-400">{{ $allocateHardware->year_approx ?? '-' }}</span>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
                                             <span class="text-xs font-semibold leading-tight text-slate-400">{{ $allocateHardware->ups_status ?? '-' }}</span>
+                                        </td>
+                                        <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
+                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $allocateHardware->updatedBy->username ?? '-' }}</span>
                                         </td>
                                         <td class="p-2 align-middle text-center bg-transparent border-b whitespace-nowrap shadow-transparent">
                                             <div class="flex justify-center items-center">
@@ -226,10 +228,11 @@
         <div class="flex flex-wrap -mx-3">
             <div class="flex-none w-full max-w-full px-3">
                 <div class="relative flex flex-col min-w-0 mb-6 break-words bg-white border-0 border-transparent border-solid shadow-soft-xl rounded-2xl bg-clip-border">
-                    <div class="p-6 pb-2 mb-0 bg-gradient-to-r from-blue-700 to-yellow-400 border-b-0 border-b-solid rounded-t-2xl border-b-transparent text-center">
-                        <h6 class="text-white">
-                            Allocated Other Items
-                        </h6>
+                    <div class="p-6 pb-0 mb-0 bg-white border-b-0 border-b-solid rounded-t-2xl border-b-transparent flex items-center justify-between">
+                        <h6 class="m-0">Other Items</h6>
+                        <a href="{{ route('allocates.other.create') }}" class="add-btn flex items-center text-sm font-semibold text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-plus mr-1"></i> Add
+                        </a>
                     </div>
 
                     <div class="flex-auto px-0 pt-0 pb-2">
@@ -240,7 +243,6 @@
                                     <th class="w-[50px] px-2 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs tracking-none whitespace-nowrap text-slate-400 opacity-70">No.</th>
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Item Name</th>
                                     <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Description</th>
-                                    <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Quantity</th>
                                     <th class="px-2 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Action</th>
                                 </tr>
                             </thead>
@@ -251,13 +253,10 @@
                                             <span class="text-xs font-semibold leading-tight text-slate-400">{{ $allocateOthers->firstItem() + $index }}</span>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $allocateOther->others->name ?? '-' }}</span>
+                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $allocateOther->item->inventory->name ?? '-' }}</span>
                                         </td>
                                         <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
                                             <span class="text-xs leading-tight leading-tight text-slate-400">{{ $allocateOther->description ?? '-' }}</span>
-                                        </td>
-                                        <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
-                                            <span class="text-xs font-semibold leading-tight text-slate-400">{{ $allocateOther->quantity ?? '-' }}</span>
                                         </td>
                                         <td class="p-2 align-middle text-center bg-transparent border-b whitespace-nowrap shadow-transparent">
                                             <div class="flex justify-center items-center">
@@ -269,7 +268,7 @@
                                                 </a>
 
                                                 <!-- Delete -->
-                                                <form action="{{ route('allocates.other.destroy', $allocateOther->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ $allocateOther->others->name }} in {{ $allocateOther->location->name }}?');" class="inline">
+                                                <form action="{{ route('allocates.other.destroy', $allocateOther->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ $allocateOther->item->inventory->name }} in {{ $allocateOther->location->name }}?');" class="inline">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="text-red-500 hover:text-red-600 text-base transition duration-200 transform hover:scale-110" title="Delete">

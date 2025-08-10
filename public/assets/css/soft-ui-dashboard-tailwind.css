@@ -4425,6 +4425,27 @@ h6 {
   transform: scale(1.05); /* membesar saat hover */
 }
 
+.update-btn {
+  background-image: linear-gradient(to top left, #2563eb, #3b82f6); /* dari biru tua ke biru muda */
+  color: white;
+  padding: 0.35rem 0.625rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-block;
+  text-align: center;
+  transition: background-image 0.3s ease-in-out, box-shadow 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 3px 6px rgba(37, 99, 235, 0.5);
+}
+
+.update-btn:hover {
+  background-image: linear-gradient(to top left, #1e40af, #2563eb); /* biru hover lebih gelap */
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.7);
+  transform: scale(1.05);
+}
+
+
 .filter-select {
   font-size: 0.875rem; /* text-sm */
   padding: 0.5rem 0.75rem; /* sedikit lebih tinggi agar sejajar dengan tombol */

@@ -53,12 +53,16 @@
                                     </select>
                                 </div>
                             </div>
-
+                            
                             <!-- Hardware Form -->
-                            @include('transfers.partials.create-form-hardware')
+                            <div id="hardware-form">
+                                @include('transfers.partials.create-form-hardware')
+                            </div>
 
                             <!-- Other Item Form -->
-                            @include('transfers.partials.create-form-other')
+                            <div id="other-form">
+                                @include('transfers.partials.create-form-other')
+                            </div>
 
                             @include('transfers.partials.script')
 
@@ -67,41 +71,42 @@
                                 <button type="submit" class="add-btn">Submit Transfer</button>
                             </div>
                             <script>
-                                const itemTypeSelect = document.querySelector('select[name="item_type_id"]');
-                                const hardwareForm = document.getElementById('hardware-form');
-                                const otherForm = document.getElementById('other-form');
+                                document.addEventListener('DOMContentLoaded', function () {
+                                    const itemTypeSelect = document.querySelector('select[name="item_type_id"]');
+                                    const hardwareForm = document.getElementById('hardware-form');
+                                    const otherForm = document.getElementById('other-form');
 
-                                function toggleForm(formToShow, formToHide) {
-                                    formToShow.classList.remove('hidden');
-                                    formToHide.classList.add('hidden');
+                                    function toggleForms(selectedType) {
+                                        if (selectedType === 'hardware') {
+                                            hardwareForm.style.display = 'block';
+                                            otherForm.style.display = 'none';
 
-                                    // Enable inputs in the form to show
-                                    formToShow.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+                                            // Aktifkan input di hardware, nonaktifkan di other
+                                            hardwareForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+                                            otherForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+                                        } else if (selectedType === 'other') {
+                                            hardwareForm.style.display = 'none';
+                                            otherForm.style.display = 'block';
 
-                                    // Disable inputs in the form to hide
-                                    formToHide.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
-                                }
-
-                                itemTypeSelect.addEventListener('change', function () {
-                                    const selected = this.value;
-
-                                    if (selected === 'hardware') {
-                                        toggleForm(hardwareForm, otherForm);
-                                    } else if (selected === 'other') {
-                                        toggleForm(otherForm, hardwareForm);
-                                    } else {
-                                        hardwareForm.classList.add('hidden');
-                                        otherForm.classList.add('hidden');
-
-                                        hardwareForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
-                                        otherForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+                                            // Aktifkan input di other, nonaktifkan di hardware
+                                            hardwareForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+                                            otherForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+                                        } else {
+                                            // Kalau belum pilih, sembunyikan keduanya dan disable input
+                                            hardwareForm.style.display = 'none';
+                                            otherForm.style.display = 'none';
+                                            hardwareForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+                                            otherForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+                                        }
                                     }
-                                });
 
-                                // Opsional: nonaktifkan semua saat load awal
-                                window.addEventListener('DOMContentLoaded', () => {
-                                    hardwareForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
-                                    otherForm.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+                                    // Event listener saat pilihan berubah
+                                    itemTypeSelect.addEventListener('change', function () {
+                                        toggleForms(this.value);
+                                    });
+
+                                    // Inisialisasi tampilan sesuai pilihan default (jika ada)
+                                    toggleForms(itemTypeSelect.value);
                                 });
                             </script>
                         </form>

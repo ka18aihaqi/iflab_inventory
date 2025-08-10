@@ -1,5 +1,3 @@
-<!-- Hardware Form -->
-<div id="hardware-form">
     <div class="flex gap-x-6 mb-4">
         <!-- Lokasi Asal -->
         <div class="w-1/4 px-1">
@@ -83,4 +81,3 @@
             class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none px-3 py-2 text-sm text-slate-800"
             placeholder="Optional notes about the transfer..."></textarea>
     </div>
-</div>

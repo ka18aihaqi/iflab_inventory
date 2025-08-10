@@ -81,21 +81,21 @@
                             <th>Nama</th>
                             <th>Ruangan Asal</th>
                             <th>Ruangan Tujuan</th>
-                            <th>Jumlah</th>
-                            <th>Tanggal Transfer</th>
                             <th>Keterangan</th>
+                            <th>Tanggal Transfer</th>
+                            <th>Transfer Oleh</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($transfers->sortBy('transferred_at') as $index => $transferLog)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $transferLog->item_name ?? '-' }}</td>
+                                <td>{{ $transferLog->item->inventory->name ?? '-' }} {{ $transferLog->item->inventory->description ?? '-' }} - SN: {{ $transferLog->item->serial_number ?? '-' }}</td>
                                 <td>{{ $transferLog->from_location ?? '-' }}</td>
                                 <td>{{ $transferLog->to_location ?? '-' }}</td>
-                                <td>{{ $transferLog->quantity }}</td>
-                                <td>{{ \Carbon\Carbon::parse($transferLog->transferred_at)->translatedFormat('d F Y') }}</td>
                                 <td>{{ $transferLog->note ?? '-' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($transferLog->transferred_at)->translatedFormat('d F Y') }}</td>
+                                <td>{{ $transferLog->transferredBy->username ?? '-' }}</td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -56,7 +56,6 @@
                                 <th>Monitor</th>
                                 <th>Year (Approx)</th>
                                 <th>UPS Status</th>
-                                {{-- <th>QR Code</th> --}}
                             </tr>
                         </thead>
                         <tbody>
@@ -64,36 +63,35 @@
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
                                     <td>
-                                        {{ optional($pc->computer)->name ?? '-' }}
-                                        {{ optional($pc->computer)->description ?? '-' }}
+                                        {{ $pc->computer->inventory->name ?? '-' }}
+                                        {{ $pc->computer->inventory->description ?? '-' }}
                                     </td>
                                     <td>
-                                        {{ optional($pc->diskDrive1)->name ?? '-' }}
-                                        {{ optional($pc->diskDrive1)->description ?? '-' }}
+                                        {{ $pc->diskDrive1->inventory->name ?? '-' }}
+                                        {{ $pc->diskDrive1->inventory->description ?? '-' }}
                                     </td>
                                     <td>
-                                        {{ optional($pc->diskDrive2)->name ?? '-' }}
-                                        {{ optional($pc->diskDrive2)->description ?? '-' }}
+                                        {{ $pc->diskDrive2->inventory->name ?? '-' }}
+                                        {{ $pc->diskDrive2->inventory->description ?? '-' }}
                                     </td>
                                     <td>
-                                        {{ optional($pc->processor)->name ?? '-' }}
-                                        {{ optional($pc->processor)->description ?? '-' }}
+                                        {{ $pc->processor->inventory->name ?? '-' }}
+                                        {{ $pc->processor->inventory->description ?? '-' }}
                                     </td>
                                     <td>
-                                        {{ optional($pc->vgaCard)->name ?? '-' }}
-                                        {{ optional($pc->vgaCard)->description ?? '-' }}
+                                        {{ $pc->vgaCard->inventory->name ?? '-' }}
+                                        {{ $pc->vgaCard->inventory->description ?? '-' }}
                                     </td>
                                     <td>
-                                        {{ optional($pc->ram)->name ?? '-' }}
-                                        {{ optional($pc->ram)->description ?? '-' }}
+                                        {{ $pc->ram->inventory->name ?? '-' }}
+                                        {{ $pc->ram->inventory->description ?? '-' }}
                                     </td>
                                     <td>
-                                        {{ optional($pc->monitor)->name ?? '-' }}
-                                        {{ optional($pc->monitor)->description ?? '-' }}
+                                        {{ $pc->monitor->inventory->name ?? '-' }}
+                                        {{ $pc->monitor->inventory->description ?? '-' }}
                                     </td>
                                     <td>{{ $pc->year_approx ?? '-' }}</td>
                                     <td>{{ $pc->ups_status ?? '-' }}</td>
-                                    {{-- <td><img src="{{ public_path('storage/' . $pc->qr_code) }}" alt="QR Code" width="50" height="50">                            </td> --}}
                                 </tr>
                             @endforeach
                         </tbody>
@@ -116,11 +114,7 @@
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
                                     <td>
-                                        {{-- @if (in_array($item->otherItem->item_type, ['disk_drive', 'processor', 'vga_card', 'ram', 'monitor']))
-                                            {{ $item->otherItem->item_name }} {{ $item->otherItem->description }}
-                                        @else --}}
-                                            {{ $item->others->name ?? '-' }}
-                                        {{-- @endif --}}
+                                        {{ $item->item->inventory->name ?? '-' }}
                                     </td>
                                     <td>{{ $item->description ?? '-' }}</td>
                                     <td>{{ $item->quantity ?? '-' }}</td>

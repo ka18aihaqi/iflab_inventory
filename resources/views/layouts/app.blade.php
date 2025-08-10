@@ -79,4 +79,31 @@
     <!-- main script file  -->
     <script src="{{ asset('assets/js/soft-ui-dashboard-tailwind.js') }}?v=1.0.5" async></script>
     <script src="{{ asset('assets/js/script.js') }}"></script>
+    <script>
+        const categoryFilter = document.getElementById('category-filter');
+        const searchInput = document.getElementById('search-input');
+        const tbody = document.getElementById('inventory-tbody');
+
+        function fetchInventories() {
+            const category = categoryFilter.value;
+            const search = searchInput.value;
+
+            fetch(`{{ route('inventories.index') }}?category=${category}&search=${search}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.text())
+            .then(html => {
+                tbody.innerHTML = html;
+            });
+        }
+
+        categoryFilter.addEventListener('change', fetchInventories);
+
+        let typingTimer;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(fetchInventories, 300);
+        });
+    </script>
+
 </html>

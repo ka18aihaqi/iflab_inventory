@@ -72,8 +72,8 @@
                                         class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-yellow-500 focus:outline-none">
                                         <option value="">-</option>
                                         @foreach($computers as $comp)
-                                            <option value="{{ $comp->id }}" {{ $allocateHardware->computer_id == $comp->id ? 'selected' : '' }}>
-                                                {{ $comp->name }} {{ $comp->description }}
+                                            <option value="{{ $comp->id }}" @selected($allocateHardware->computer_id == $comp->id)>
+                                                {{ $comp->inventory->name ?? '-' }} {{ $comp->inventory->description ?? '' }} (SN: {{ $comp->serial_number ?? 'N/A' }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -88,8 +88,8 @@
                                         class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-yellow-500 focus:outline-none">
                                         <option value="">-</option>
                                         @foreach($processors as $proc)
-                                            <option value="{{ $proc->id }}" {{ $allocateHardware->processor_id == $proc->id ? 'selected' : '' }}>
-                                                {{ $proc->name }} {{ $proc->description }}
+                                            <option value="{{ $proc->id }}" @selected($allocateHardware->processor_id == $proc->id)>
+                                                {{ $proc->inventory->name ?? '-' }} {{ $proc->inventory->description ?? '' }} (SN: {{ $proc->serial_number ?? 'N/A' }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -103,7 +103,7 @@
                                         <option value="">-</option>
                                         @foreach($diskDrives as $drive)
                                             <option value="{{ $drive->id }}" {{ $allocateHardware->disk_drive_1_id == $drive->id ? 'selected' : '' }}>
-                                                {{ $drive->name }} {{ $drive->description }}
+                                                {{ $drive->inventory->name ?? '-' }} {{ $drive->inventory->description ?? '' }} (SN: {{ $drive->serial_number ?? 'N/A' }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -117,7 +117,7 @@
                                         <option value="">-</option>
                                         @foreach($diskDrives as $drive)
                                             <option value="{{ $drive->id }}" {{ $allocateHardware->disk_drive_2_id == $drive->id ? 'selected' : '' }}>
-                                                {{ $drive->name }} {{ $drive->description }}
+                                                {{ $drive->inventory->name ?? '-' }} {{ $drive->inventory->description ?? '' }} (SN: {{ $drive->serial_number ?? 'N/A' }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -133,7 +133,7 @@
                                         <option value="">-</option>
                                         @foreach($vgaCards as $vga)
                                             <option value="{{ $vga->id }}" {{ $allocateHardware->vga_card_id == $vga->id ? 'selected' : '' }}>
-                                                {{ $vga->name }} {{ $vga->description }}
+                                                {{ $vga->inventory->name ?? '-' }} {{ $vga->inventory->description ?? '' }} (SN: {{ $vga->serial_number ?? 'N/A' }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -147,7 +147,7 @@
                                         <option value="">-</option>
                                         @foreach($rams as $ram)
                                             <option value="{{ $ram->id }}" {{ $allocateHardware->ram_id == $ram->id ? 'selected' : '' }}>
-                                                {{ $ram->name }} {{ $ram->description }}
+                                                {{ $ram->inventory->name ?? '-' }} {{ $ram->inventory->description ?? '' }} (SN: {{ $ram->serial_number ?? 'N/A' }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -161,7 +161,7 @@
                                         <option value="">-</option>
                                         @foreach($monitors as $monitor)
                                             <option value="{{ $monitor->id }}" {{ $allocateHardware->monitor_id == $monitor->id ? 'selected' : '' }}>
-                                                {{ $monitor->name }} {{ $monitor->description }}
+                                                {{ $monitor->inventory->name ?? '-' }} {{ $monitor->inventory->description ?? '' }} (SN: {{ $monitor->serial_number ?? 'N/A' }})
                                             </option>
                                         @endforeach
                                     </select>

@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const itemTypeSelect = document.querySelector('select[name="item_type_id"]');
+    const itemTypeSelect = document.querySelector('select[name="category"]');
 
     if (!itemTypeSelect) return; // stop kalau select tidak ditemukan
 
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
             'VGA': vgaForm,
             'RAM': ramForm,
             'Monitor': monitorForm,
-            'Other Items': otherForm
+            'Other': otherForm
         };
 
         const selectedForm = formsMap[selectedType];

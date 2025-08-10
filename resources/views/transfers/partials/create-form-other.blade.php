@@ -1,5 +1,3 @@
-<!-- Other Item Form -->
-<div id="other-form">
     <div class="flex gap-x-6 mb-4">
         <!-- Lokasi Asal -->
         <div class="w-1/2 px-1">
@@ -40,13 +38,6 @@
                 class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none px-3 py-2 text-sm text-slate-800">
                 <option value="" disabled selected>Select item</option>
             </select>
-
-            <!-- Quantity -->
-            <label for="quantity" class="block text-sm font-medium text-slate-700">
-                Quantity
-            </label>
-            <input type="number" name="quantity" id="quantity" min="1" placeholder="e.g. 3"
-                class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none px-3 py-2 text-sm text-slate-800" />
         </div>
 
         <!-- Component Hardware To Location -->
@@ -57,4 +48,3 @@
                 placeholder="Optional notes about the transfer..."></textarea>
         </div>
     </div>
-</div>

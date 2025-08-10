@@ -24,25 +24,30 @@
                         </script>
                     @endif
 
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between mb-4">
                         <!-- Add Button -->
                         <a href="{{ route('inventories.create') }}" class="add-btn">
                             <i class="fas fa-plus text-sm mr-1"></i> Add
                         </a>
 
+                        <!-- Filter Category -->
+                        <select 
+                            id="category-filter"
+                            class="text-sm rounded-lg border border-gray-300 bg-white py-2 px-3 text-gray-700 focus:border-blue-500 focus:outline-none"
+                        >
+                            <option value="">All Categories</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category }}">{{ $category }}</option>
+                            @endforeach
+                        </select>
+
                         <!-- Search -->
-                        <form method="GET" action="{{ route('inventories.index') }}" class="relative flex flex-wrap items-stretch transition-all rounded-lg ease-soft">
-                            <span class="text-sm ease-soft leading-5.6 absolute z-50 -ml-px flex h-full items-center whitespace-nowrap rounded-lg rounded-tr-none rounded-br-none border border-r-0 border-transparent bg-transparent py-2 px-2.5 text-center font-normal text-slate-500 transition-all">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input 
-                                type="text" 
-                                name="search"
-                                value="{{ request('search') }}"
-                                class="pl-8.75 text-sm focus:shadow-soft-blue-custom ease-soft w-1/100 leading-5.6 relative -ml-px block min-w-0 flex-auto rounded-lg border border-solid border-gray-300 bg-white bg-clip-padding py-2 pr-3 text-gray-700 transition-all placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:transition-shadow" 
-                                placeholder="Type here..." 
-                            />
-                        </form>
+                        <input 
+                            type="text" 
+                            id="search-input"
+                            class="pl-3 text-sm rounded-lg border border-gray-300 bg-white py-2 pr-3 text-gray-700 placeholder-gray-500 focus:border-blue-500 focus:outline-none" 
+                            placeholder="Type here..." 
+                        />
                     </div>
 
                 </div>
@@ -50,33 +55,70 @@
         </div>
     </div>
 
-    <!-- Tables -->
-    <div class="flex flex-wrap -mx-3 gap-4">
-        @php
-            $search = request('search');
-        @endphp
+    <div class="flex flex-wrap -mx-3">
+        <div class="flex-none w-full max-w-full px-3">
+            <div class="relative flex flex-col min-w-0 mb-6 break-words bg-white border-0 border-transparent border-solid shadow-soft-xl rounded-2xl bg-clip-border">
+                <div class="p-6 pb-0 mb-0 bg-white border-b-0 border-b-solid rounded-t-2xl border-b-transparent">
+                    <h6>Inventories</h6>
+                </div>
 
-        <!-- Computer Table -->
-        @include('inventories.partials.table-computer')
+                <div class="flex-auto px-0 pt-0 pb-2">
+                    <div class="p-0 overflow-x-auto">
+                    <table class="items-center w-full mb-0 align-top border-gray-200 text-slate-500">
+                        <thead class="align-bottom">
+                            <tr>
+                                <th class="w-[50px] px-2 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs tracking-none whitespace-nowrap text-slate-400 opacity-70">No</th>
+                                <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Category</th>
+                                <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Name</th>
+                                <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Description</th>
+                                <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Total Quantity</th>
+                                <th class="px-2 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-tbody">
+                            @include('inventories.partials.table-body', ['inventories' => $inventories])
+                        </tbody>
+                    </table>
+                    @if ($inventories->hasPages())
+                        <nav class="flex items-center justify-center space-x-1 mt-4 text-sm">
+                            {{-- Previous Page Link --}}
+                            @if ($inventories->onFirstPage())
+                                <span class="px-2 py-0.5 border rounded text-gray-400 mx-2 transition duration-200 transform">&lt;</span>
+                            @else
+                                <a href="{{ $inventories->appends(['date' => request('date')])->previousPageUrl() }}"
+                                class="px-2 py-0.5 border rounded hover:bg-gray-100 mx-1 transition duration-200 transform hover:scale-105">&lt;</a>
+                            @endif
 
-        <!-- Disk Drives Table -->
-        @include('inventories.partials.table-drives')
+                            {{-- Custom Pagination Elements --}}
+                            @php
+                                $currentPage = $inventories->currentPage();
+                                $lastPage = $inventories->lastPage();
+                                $start = max(1, $currentPage - 1);
+                                $end = min($lastPage, $currentPage + 1);
+                            @endphp
 
-        <!-- Processors Table -->
-        @include('inventories.partials.table-processors')
+                            @for ($page = $start; $page <= $end; $page++)
+                                @if ($page == $currentPage)
+                                    <span class="px-2 py-0.5 bg-yellow-500 text-white rounded mx-2 transition duration-200 transform hover:scale-105">{{ $page }}</span>
+                                @else
+                                    <a href="{{ $inventories->appends(['date' => request('date')])->url($page) }}"
+                                    class="px-2 py-0.5 border rounded hover:bg-gray-100 mx-2 transition duration-200 transform hover:scale-105">{{ $page }}</a>
+                                @endif
+                            @endfor
 
-        <!-- VGA Table -->
-        @include('inventories.partials.table-vga')
-
-        <!-- RAM Table -->
-        @include('inventories.partials.table-ram')
-
-        <!-- Monitors Table -->
-        @include('inventories.partials.table-monitors')
-
-        <!-- Other Items Table -->
-        @include('inventories.partials.table-others')
-
+                            {{-- Next Page Link --}}
+                            @if ($inventories->hasMorePages())
+                                <a href="{{ $inventories->appends(['date' => request('date')])->nextPageUrl() }}"
+                                class="px-2 py-0.5 border rounded hover:bg-gray-100 mx-2 transition duration-200 transform hover:scale-105">&gt;</a>
+                            @else
+                                <span class="px-2 py-0.5 border rounded text-gray-400 mx-2 transition duration-200 transform">&gt;</span>
+                            @endif
+                        </nav>
+                    @endif
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>

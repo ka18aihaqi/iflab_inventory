@@ -42,13 +42,6 @@
 
         <!-- Stock -->
         <div class="w-1/2 px-1">
-            <label for="processor-stock" class="block text-sm font-medium text-slate-700">
-                Stock <span class="text-red-500">*</span>
-            </label>
-            <input type="number" id="processor-stock" name="stock" min="0" step="1"
-                value="{{ old('stock', $inventory->stock) }}"
-                class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none px-3 py-2 text-sm text-slate-800"
-                placeholder="e.g., 10">
         </div>
     </div>
 </div>

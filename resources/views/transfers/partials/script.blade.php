@@ -46,8 +46,8 @@
 
         filtered.forEach(item => {
             const option = document.createElement('option');
-            option.value = item.others.id;
-            option.text = `${item.others.name} (${item.quantity})`;
+            option.value = item.item.id;
+            option.text = `${item.item.inventory.name} (SN: ${item.item.serial_number ?? 'N/A'})`;
             otherItemSelect.appendChild(option);
         });
     });
@@ -111,9 +111,9 @@
         container.appendChild(checkAllDiv);
 
         for (const [key, label] of Object.entries(componentMap)) {
-            const component = selected[key];
-            const name = component?.name ?? 'Empty';
-            const desc = component?.description ?? '';
+            const component = selected[key]; // ini InventoryItem
+            const name = component?.inventory?.name ?? 'Empty';         // ambil dari relasi inventory
+            const desc = component?.inventory?.description ?? '';
             const display = desc ? `${name} (${desc})` : name;
             const disabled = !component;
             const textClass = disabled ? 'text-red-500 italic' : '';

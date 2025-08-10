@@ -37,21 +37,21 @@
                         <form action="{{ route('inventories.store') }}" method="POST" class="space-y-4">
                             @csrf
 
-                            <!-- Item Type -->
+                            <!-- Category -->
                             <div class="flex justify-center mb-4">
                                 <div class="w-1/2 flex items-center space-x-4">
                                     <!-- Label -->
                                     <label for="type" class="w-1/3 text-sm font-medium text-slate-700">
-                                        Type <span class="text-red-500">*</span>
+                                        Category <span class="text-red-500">*</span>
                                     </label>
                                     <!-- Select -->
-                                    <select name="item_type_id" required
+                                    <select name="category" required
                                         class="w-2/3 rounded-lg border border-slate-200 shadow-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none px-3 py-2 text-sm text-slate-800">
                                         {{-- <option value="" disabled {{ old('item_type_id') ? '' : 'selected' }}>Item Type</option> --}}
-                                        @foreach($itemTypes as $type)
-                                            <option value="{{ $type->id }}"
-                                                {{ old('item_type_id', $type->name === 'Other Items' ? $type->id : null) == $type->id ? 'selected' : '' }}>
-                                                {{ $type->name }}
+                                        @foreach($categories as $category)
+                                            <option value="{{ $category }}"
+                                                {{ old('category', $category === 'Other' ? $category : null) == $category ? 'selected' : '' }}>
+                                                {{ $category }}
                                             </option>
                                         @endforeach
                                     </select>

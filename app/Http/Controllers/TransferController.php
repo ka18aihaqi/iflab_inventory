@@ -36,8 +36,19 @@ class TransferController extends Controller
     public function create()
     {
         return view('transfers.create', [
-            'hardwareAllocations' => AllocateHardware::with(['location', 'computer', 'diskDrive1', 'diskDrive2', 'processor', 'vgaCard', 'ram', 'monitor'])->get(),
-            'otherAllocations' => AllocateOther::with(['location', 'others'])->get(),
+            'hardwareAllocations' => AllocateHardware::with([
+                'location',
+                'computer.inventory',
+                'diskDrive1.inventory',
+                'diskDrive2.inventory',
+                'processor.inventory',
+                'vgaCard.inventory',
+                'ram.inventory',
+                'monitor.inventory'
+            ])->get(),
+
+            'otherAllocations' => AllocateOther::with(['location', 'item.inventory'])->get(),
+
             'locations' => Location::all(),
         ]);
     }
@@ -54,6 +65,20 @@ class TransferController extends Controller
         }
 
         if ($itemType === 'hardware') {
+
+            // dd($request->all());
+
+            $request->validate([
+                'item_type_id' => 'required|in:hardware,other',
+                'from_location' => 'required|exists:locations,id',
+                'from_desk_number' => 'required|integer',
+                'to_location' => 'required|exists:locations,id',
+                'to_desk_number' => 'required|integer',
+                'components_from' => 'required|array|min:1',
+                'components_from.*' => 'in:computer,processor,ram,vga_card,disk_drive1,disk_drive2,monitor',
+                'note' => 'nullable|string',
+            ]);
+
             if (
                 $request->from_location == $request->to_location &&
                 $request->from_desk_number == $request->to_desk_number
@@ -64,16 +89,6 @@ class TransferController extends Controller
             if (empty($request->components_from)) {
                 return back()->with('error', 'Please select at least one component to transfer.')->withInput();
             }
-
-            $request->validate([
-                'from_location' => 'required|exists:locations,id',
-                'from_desk_number' => 'required|integer',
-                'to_location' => 'required|exists:locations,id',
-                'to_desk_number' => 'required|integer',
-                'components_from' => 'required|array',
-                'components_from.*' => 'in:computer,processor,ram,vga_card,disk_drive1,disk_drive2,monitor',
-                'note' => 'nullable|string',
-            ]);
 
             try {
                 DB::beginTransaction();
@@ -86,36 +101,27 @@ class TransferController extends Controller
                     ['location_id' => $request->to_location, 'desk_number' => $request->to_desk_number]
                 );
 
-                $fromLocationName = $from->location->name . ' - Desk No. ' . $from->desk_number;
-                $toLocationName = $to->location->name . ' - Desk No. ' . $request->to_desk_number;
+                $fromLocationName = Location::find($from->location_id)->name . ' - Meja. ' . $from->desk_number;
+                $toLocationName = Location::find($request->to_location)->name . ' - Meja. ' . $request->to_desk_number;
 
                 foreach ($request->components_from as $componentKey) {
                     $fieldFrom = $componentKey . '_id';
-
-                    // Tangani nama field khusus
                     if ($componentKey === 'disk_drive1') $fieldFrom = 'disk_drive_1_id';
                     if ($componentKey === 'disk_drive2') $fieldFrom = 'disk_drive_2_id';
 
                     $inventoryId = $from->{$fieldFrom};
-
                     if (!$inventoryId) continue;
 
                     $component = optional($from->{$componentKey});
-                    $itemName = $component->name ?? ucfirst($componentKey);
-                    if ($component->description) {
-                        $itemName .= " ({$component->description})";
-                    }
 
-                    // Simpan log transfer
                     TransferLog::create([
-                        'item_name'     => $itemName,
+                        'item_id'       => $inventoryId,
                         'from_location' => $fromLocationName,
                         'to_location'   => $toLocationName,
-                        'quantity'      => 1,
                         'note'          => $request->note,
+                        'transferred_by'=> auth()->id(),
                     ]);
 
-                    // Pindahkan komponen dari 'from' ke 'to'
                     $to->{$fieldFrom} = $inventoryId;
                     $from->{$fieldFrom} = null;
                 }
@@ -127,68 +133,59 @@ class TransferController extends Controller
 
                 return redirect()->route('transfers.index', ['date' => now()->toDateString()])
                     ->with('success', 'Transfer has been successfully recorded.');
+
             } catch (\Exception $e) {
                 DB::rollBack();
-                return back()->with('error', 'An unexpected error occurred while processing the transfer.')->withInput();
+                return back()->with('error', 'An unexpected error occurred while processing the transfer: ' . $e->getMessage())->withInput();
             }
+
         }
 
         if ($itemType === 'other') {
-            if (
-                $request->from_location == $request->to_location
-            ) {
-                return back()->with('error', 'Source location and desk number must not be the same as the destination.')->withInput();
-            }
+
+            // dd($request->all());
 
             $request->validate([
                 'from_location' => 'required|exists:locations,id',
-                'to_location' => 'required|exists:locations,id',
-                'other_item'   => 'required|exists:inventories,id',
-                'quantity'     => 'required|integer|min:1',
-                'note'         => 'nullable|string',
+                'to_location'   => 'required|exists:locations,id',
+                'other_item'    => 'required|exists:inventory_items,id', // sekarang langsung ke inventory_items.id
+                'note'          => 'nullable|string',
             ]);
 
-            // Ambil data alokasi dari lokasi asal
-            $allocation = AllocateOther::where('location_id', $request->from_location)
-                ->where('others_id', $request->other_item)
-                ->firstOrFail();
-
-            // Pastikan stok mencukupi
-            if ($request->quantity > $allocation->quantity) {
-                return back()
-                ->with('error', 'Quantity exceeds available stock.')
-                ->withInput();
+            if ($request->from_location == $request->to_location) {
+                return back()->with('error', 'Source location and destination location must not be the same.')->withInput();
             }
 
-            // Ambil nama lokasi untuk log
+            // Cari alokasi yang menunjuk ke inventory_item dan lokasi asal
+            $allocation = AllocateOther::where('location_id', $request->from_location)
+                ->where('item_id', $request->other_item)
+                ->first();
+
+            if (!$allocation) {
+                return back()->with('error', 'No allocation found for the selected item in the source location.')->withInput();
+            }
+
+            // Nama lokasi untuk log
             $fromLocationName = $allocation->location->name;
             $toLocationName = Location::findOrFail($request->to_location)->name;
 
             // Simpan log transfer
             TransferLog::create([
-                'item_name'     => $allocation->others->name . 
-                                ($allocation->others->description ? " ({$allocation->others->description})" : ''),
+                'item_id'       => $allocation->item_id,
                 'from_location' => $fromLocationName,
                 'to_location'   => $toLocationName,
-                'quantity'      => $request->quantity,
                 'note'          => $request->note,
+                'transferred_by'=> auth()->id(),
             ]);
 
-            // Kurangi alokasi di lokasi asal
-            $allocation->quantity -= $request->quantity;
+            // Update lokasi alokasi ke lokasi tujuan
+            $allocation->location_id = $request->to_location;
             $allocation->save();
-
-            // Tambahkan alokasi ke lokasi tujuan (buat baru jika belum ada)
-            $toAllocation = AllocateOther::firstOrNew([
-                'location_id' => $request->to_location,
-                'others_id'   => $request->other_item,
-            ]);
-
-            $toAllocation->quantity += $request->quantity;
-            $toAllocation->save();
 
             return redirect()->route('transfers.index', ['date' => now()->toDateString()])
                 ->with('success', 'Transfer has been successfully recorded.');
+
+
         }
 
         return back()->with('error', 'Sorry, this item type is not supported yet.');

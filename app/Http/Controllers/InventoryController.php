@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ItemType;
+use Illuminate\Validation\Rule;
 use App\Models\Inventory;
+use App\Models\InventoryItem;
 use Illuminate\Http\Request;
 
 class InventoryController extends Controller
@@ -13,72 +14,31 @@ class InventoryController extends Controller
      */
     public function index(Request $request)
     {
-        $search = $request->search;
+        $query = Inventory::query();
 
-        $computer = Inventory::with('itemType')
-            ->whereHas('itemType', function ($q) {
-                $q->where('name', 'Computer');
-            })
-            ->when($request->has('search'), function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            })
-            ->paginate(5, ['*'], 'computer_page'); // custom page name
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
 
-        $diskDrives = Inventory::with('itemType')
-            ->whereHas('itemType', function ($q) {
-                $q->where('name', 'Disk Drive');
-            })
-            ->when($request->has('search'), function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            })
-            ->paginate(5, ['*'], 'diskdrives_page');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+                ->orWhere('category', 'like', "%{$search}%")
+                ->orWhere('total_quantity', 'like', "%{$search}%");
+            });
+        }
 
-        $processors = Inventory::with('itemType')
-            ->whereHas('itemType', function ($q) {
-                $q->where('name', 'Processor');
-            })
-            ->when($request->has('search'), function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            })
-            ->paginate(5, ['*'], 'processors_page');
+        $inventories = $query->orderBy('category')->paginate(10);
+        $categories = Inventory::CATEGORIES;
 
-        $vga = Inventory::with('itemType')
-            ->whereHas('itemType', function ($q) {
-                $q->where('name', 'VGA');
-            })
-            ->when($request->has('search'), function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            })
-            ->paginate(5, ['*'], 'vga_page');
+        // Kalau request AJAX → kirim HTML tbody saja
+        if ($request->ajax()) {
+            return view('inventories.partials.table-body', compact('inventories'))->render();
+        }
 
-        $ram = Inventory::with('itemType')
-            ->whereHas('itemType', function ($q) {
-                $q->where('name', 'RAM');
-            })
-            ->when($request->has('search'), function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            })
-            ->paginate(5, ['*'], 'ram_page');
-
-        $monitors = Inventory::with('itemType')
-            ->whereHas('itemType', function ($q) {
-                $q->where('name', 'Monitor');
-            })
-            ->when($request->has('search'), function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            })
-            ->paginate(5, ['*'], 'monitors_page');
-
-        $others = Inventory::with('itemType')
-            ->whereHas('itemType', function ($q) {
-                $q->where('name', 'Other Items');
-            })
-            ->when($request->has('search'), function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            })
-            ->paginate(5, ['*'], 'others_page');
-
-        return view('inventories.index', compact('computer', 'search', 'diskDrives', 'processors', 'vga', 'ram', 'monitors', 'others'));
+        return view('inventories.index', compact('inventories', 'categories'));
     }
 
     /**
@@ -86,8 +46,9 @@ class InventoryController extends Controller
      */
     public function create()
     {
-        $itemTypes = ItemType::all();
-        return view('inventories.create', compact('itemTypes'));
+        return view('inventories.create', [
+            'categories' => Inventory::CATEGORIES
+        ]);
     }
 
     /**
@@ -95,254 +56,265 @@ class InventoryController extends Controller
      */
     public function store(Request $request)
     {
-        $itemType = \App\Models\ItemType::find($request->item_type_id);
+        // dd($request->all());
 
-        if (!$itemType) {
-            return back()->withErrors(['item_type_id' => 'Item type not found.']);
+        if (!in_array($request->category, \App\Models\Inventory::CATEGORIES)) {
+            return back()->withErrors(['category' => 'Invalid category selected.']);
         }
 
-        if ($itemType->name === 'Computer') {
+        if ($request->category === 'Computer') {
+            // Validasi input
             $validated = $request->validate([
-                'item_type_id' => 'required|exists:item_types,id',
-                'brand'        => 'required|string',
-                'model'        => 'nullable|string',
-                'stock'        => 'nullable|integer|min:0',
+                'category' => ['required', Rule::in(Inventory::CATEGORIES)],
+                'brand'    => 'required|string',
+                'model'    => 'nullable|string',
             ]);
 
-            // Cari inventory dengan brand + model yang sama
-            $existing = \App\Models\Inventory::where('item_type_id', $validated['item_type_id'])
+            // Cek apakah sudah ada inventory dengan kategori + brand + model yang sama
+            $exists = Inventory::where('category', $validated['category'])
                 ->where('name', $validated['brand'])
                 ->where('description', $validated['model'])
-                ->first();
+                ->exists();
 
-            if ($existing) {
-                // Tambahkan stok jika sudah ada
-                $existing->increment('stock', $validated['stock'] ?? 0);
-
-                return redirect()->route('inventories.index')
-                    ->with('success', "<strong>{$existing->name} - {$existing->description}</strong> stock has been increased.");
+            if ($exists) {
+                return back()
+                    ->withErrors(['brand' => 'Barang dengan kategori dan merek/model ini sudah ada.'])
+                    ->withInput();
             }
 
-            // Jika belum ada, buat baru
-            $inventory = new \App\Models\Inventory();
-            $inventory->item_type_id = $validated['item_type_id'];
-            $inventory->name = $validated['brand'];
-            $inventory->description = $validated['model'];
-            $inventory->stock = $validated['stock'];
-            $inventory->save();
+            // Simpan data baru
+            $inventory = Inventory::create([
+                'category'       => $validated['category'],
+                'name'           => $validated['brand'],
+                'description'    => $validated['model'],
+                'total_quantity' => 0 // awalnya 0, nanti bertambah kalau inventory_items dibuat
+            ]);
 
             return redirect()->route('inventories.index')
                 ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been added to the inventory.");
         }
 
-        if ($itemType->name === 'Disk Drive') {
+        if ($request->category === 'Disk Drive') {
+            // Validasi input
             $validated = $request->validate([
-                'item_type_id' => 'required|exists:item_types,id',
-                'brand'        => 'required|string',
-                'type'         => 'nullable|string|in:HDD,SSD',
-                'size'         => 'nullable|integer|min:1',
-                'stock'        => 'nullable|integer|min:0',
+                'category' => ['required', Rule::in(Inventory::CATEGORIES)],
+                'brand'    => 'required|string',
+                'type'     => 'required|string|in:HDD,SSD',
+                'size'     => 'required|integer|min:1', // kapasitas GB
             ]);
 
+            // Gabungkan spesifikasi ke description
             $description = "{$validated['size']} GB - {$validated['type']}";
 
-            // Cari apakah data sudah ada
-            $existing = \App\Models\Inventory::where('item_type_id', $validated['item_type_id'])
+            // Cek apakah sudah ada barang yang sama
+            $exists = Inventory::where('category', $validated['category'])
                 ->where('name', $validated['brand'])
                 ->where('description', $description)
-                ->first();
+                ->exists();
 
-            if ($existing) {
-                $existing->increment('stock', $validated['stock'] ?? 0);
-
-                return redirect()->route('inventories.index')
-                    ->with('success', "<strong>{$existing->name} - {$existing->description}</strong> stock has been increased.");
+            if ($exists) {
+                return back()
+                    ->withErrors(['brand' => 'Disk Drive dengan spesifikasi ini sudah ada.'])
+                    ->withInput();
             }
 
-            // Kalau belum ada → buat baru
-            $inventory = new \App\Models\Inventory();
-            $inventory->item_type_id = $validated['item_type_id'];
-            $inventory->name = $validated['brand'];
-            $inventory->description = $description;
-            $inventory->stock = $validated['stock'];
-            $inventory->save();
+            // Simpan data baru
+            $inventory = Inventory::create([
+                'category'       => $validated['category'],
+                'name'           => $validated['brand'],
+                'description'    => $description,
+                'total_quantity' => 0 // awalnya 0
+            ]);
 
             return redirect()->route('inventories.index')
                 ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been added to the inventory.");
         }
 
-        if ($itemType->name === 'Processor') {
+        if ($request->category === 'Processor') {
+            // Validasi input
             $validated = $request->validate([
-                'item_type_id' => 'required|exists:item_types,id',
-                'type'         => 'required|string',      // e.g., Intel, AMD
-                'model'        => 'nullable|string',      // e.g., i5-11400F
-                'frequency'    => 'nullable|numeric|min:0.1', // e.g., 2.6
-                'stock'        => 'nullable|integer|min:0',
+                'category'   => ['required', Rule::in(Inventory::CATEGORIES)],
+                'type'       => 'required|string',      // e.g., Intel, AMD
+                'model'      => 'nullable|string',      // e.g., i5-11400F
+                'frequency'  => 'nullable|numeric|min:0.1', // e.g., 2.6
             ]);
 
-            $description = "{$validated['model']} - {$validated['frequency']} GHz";
+            // Gabungkan spesifikasi jadi description
+            $descriptionParts = [];
+            if (!empty($validated['model'])) {
+                $descriptionParts[] = $validated['model'];
+            }
+            if (!empty($validated['frequency'])) {
+                $descriptionParts[] = $validated['frequency'] . ' GHz';
+            }
+            $description = implode(' - ', $descriptionParts);
 
-            // Cari apakah sudah ada processor yang sama
-            $existing = \App\Models\Inventory::where('item_type_id', $validated['item_type_id'])
+            // Cek apakah sudah ada processor yang sama
+            $exists = Inventory::where('category', $validated['category'])
                 ->where('name', $validated['type'])
                 ->where('description', $description)
-                ->first();
+                ->exists();
 
-            if ($existing) {
-                $existing->increment('stock', $validated['stock'] ?? 0);
-
-                return redirect()->route('inventories.index')
-                    ->with('success', "<strong>{$existing->name} - {$existing->description}</strong> stock has been increased.");
+            if ($exists) {
+                return back()
+                    ->withErrors(['type' => 'Processor dengan spesifikasi ini sudah ada.'])
+                    ->withInput();
             }
 
-            // Kalau belum ada → buat baru
-            $inventory = new \App\Models\Inventory();
-            $inventory->item_type_id = $validated['item_type_id'];
-            $inventory->name = $validated['type'];
-            $inventory->description = $description;
-            $inventory->stock = $validated['stock'];
-            $inventory->save();
+            // Simpan data baru
+            $inventory = Inventory::create([
+                'category'       => $validated['category'],
+                'name'           => $validated['type'],
+                'description'    => $description,
+                'total_quantity' => 0 // awalnya 0
+            ]);
 
             return redirect()->route('inventories.index')
                 ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been added to the inventory.");
         }
 
-        if ($itemType->name === 'VGA') {
+        if ($request->category === 'VGA') {
+            // Validasi input
             $validated = $request->validate([
-                'item_type_id' => 'required|exists:item_types,id',
-                'brand'        => 'required|string',
-                'size'         => 'required|integer|min:1',
-                'stock'        => 'nullable|integer|min:0',
+                'category' => ['required', Rule::in(Inventory::CATEGORIES)],
+                'brand'    => 'required|string',
+                'size'     => 'required|integer|min:1', // GB
             ]);
 
+            // Buat description
             $description = "{$validated['size']} GB";
 
-            // Cek apakah item VGA dengan brand dan size yang sama sudah ada
-            $existing = \App\Models\Inventory::where('item_type_id', $validated['item_type_id'])
+            // Cek apakah VGA dengan brand + size yang sama sudah ada
+            $exists = Inventory::where('category', $validated['category'])
                 ->where('name', $validated['brand'])
                 ->where('description', $description)
-                ->first();
+                ->exists();
 
-            if ($existing) {
-                $existing->increment('stock', $validated['stock'] ?? 0);
-
-                return redirect()->route('inventories.index')
-                    ->with('success', "<strong>{$existing->name} - {$existing->description}</strong> stock has been increased.");
+            if ($exists) {
+                return back()
+                    ->withErrors(['brand' => 'VGA dengan merk dan kapasitas ini sudah ada.'])
+                    ->withInput();
             }
 
-            // Kalau belum ada → buat baru
-            $inventory = new \App\Models\Inventory();
-            $inventory->item_type_id = $validated['item_type_id'];
-            $inventory->name = $validated['brand'];
-            $inventory->description = $description;
-            $inventory->stock = $validated['stock'];
-            $inventory->save();
-
-            return redirect()->route('inventories.index')
-                ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been added to the inventory.");
-        }
-
-        if ($itemType->name === 'RAM') {
-            $validated = $request->validate([
-                'item_type_id' => 'required|exists:item_types,id',
-                'brand'        => 'required|string',
-                'size'         => 'nullable|integer|min:1',
-                'type'         => 'nullable|string',
-                'stock'        => 'nullable|integer|min:0',
+            // Simpan data baru
+            $inventory = Inventory::create([
+                'category'       => $validated['category'],
+                'name'           => $validated['brand'],
+                'description'    => $description,
+                'total_quantity' => 0
             ]);
 
-            $description = trim("{$validated['size']} GB - {$validated['type']}");
-
-            $existing = \App\Models\Inventory::where('item_type_id', $validated['item_type_id'])
-                ->where('name', $validated['brand'])
-                ->where('description', $description)
-                ->first();
-
-            if ($existing) {
-                $existing->increment('stock', $validated['stock'] ?? 0);
-
-                return redirect()->route('inventories.index')
-                    ->with('success', "<strong>{$existing->name} - {$existing->description}</strong> stock has been increased.");
-            }
-
-            $inventory = new \App\Models\Inventory();
-            $inventory->item_type_id = $validated['item_type_id'];
-            $inventory->name = $validated['brand'];
-            $inventory->description = $description;
-            $inventory->stock = $validated['stock'];
-            $inventory->save();
-
             return redirect()->route('inventories.index')
                 ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been added to the inventory.");
         }
 
-        if ($itemType->name === 'Monitor') {
+        if ($request->category === 'RAM') {
+            // Validasi input
             $validated = $request->validate([
-                'item_type_id' => 'required|exists:item_types,id',
-                'brand'        => 'required|string',
-                'resolution'   => 'nullable|string',
-                'inch'         => 'nullable|integer|min:1',
-                'stock'        => 'nullable|integer|min:0',
+                'category' => ['required', Rule::in(Inventory::CATEGORIES)],
+                'brand'    => 'required|string',
+                'size'     => 'nullable|integer|min:1', // GB
+                'type'     => 'nullable|string',        // DDR3, DDR4, DDR5, dll.
             ]);
 
-            // Gabungkan resolusi dan ukuran ke deskripsi
-            $description = trim("{$validated['resolution']} - {$validated['inch']} inch");
+            // Gabungkan size dan type untuk description
+            $description = trim(
+                ($validated['size'] ? "{$validated['size']} GB" : '') .
+                ($validated['type'] ? " - {$validated['type']}" : '')
+            );
 
-            // Cari apakah monitor dengan detail yang sama sudah ada
-            $existing = \App\Models\Inventory::where('item_type_id', $validated['item_type_id'])
+            // Cek apakah RAM dengan brand + description sama sudah ada
+            $exists = Inventory::where('category', $validated['category'])
                 ->where('name', $validated['brand'])
                 ->where('description', $description)
-                ->first();
+                ->exists();
 
-            if ($existing) {
-                $existing->increment('stock', $validated['stock'] ?? 0);
-
-                return redirect()->route('inventories.index')
-                    ->with('success', "<strong>{$existing->name} - {$existing->description}</strong> stock has been increased.");
+            if ($exists) {
+                return back()
+                    ->withErrors(['brand' => 'RAM dengan merk, ukuran, dan tipe ini sudah ada.'])
+                    ->withInput();
             }
 
-            // Jika belum ada, buat baru
-            $inventory = new \App\Models\Inventory();
-            $inventory->item_type_id = $validated['item_type_id'];
-            $inventory->name = $validated['brand'];
-            $inventory->description = $description;
-            $inventory->stock = $validated['stock'];
-            $inventory->save();
+            // Simpan data baru
+            $inventory = Inventory::create([
+                'category'       => $validated['category'],
+                'name'           => $validated['brand'],
+                'description'    => $description,
+                'total_quantity' => 0
+            ]);
 
             return redirect()->route('inventories.index')
                 ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been added to the inventory.");
         }
 
-        if ($itemType->name === 'Other Items') {
+        if ($request->category === 'Monitor') {
+            // Validasi input
             $validated = $request->validate([
-                'item_type_id' => 'required|exists:item_types,id',
-                'name'         => 'required|string',
-                'description'  => 'nullable|string',
-                'stock'        => 'nullable|integer|min:0',
+                'category'   => ['required', Rule::in(Inventory::CATEGORIES)],
+                'brand'      => 'required|string',
+                'resolution' => 'nullable|string',  // misal: 1920x1080
+                'inch'       => 'nullable|integer|min:1', // ukuran layar
+            ]);
+
+            // Gabungkan resolusi & ukuran ke description
+            $description = trim(
+                ($validated['resolution'] ? "{$validated['resolution']}" : '') .
+                ($validated['inch'] ? " - {$validated['inch']} inch" : '')
+            );
+
+            // Cek apakah sudah ada monitor yang sama
+            $exists = Inventory::where('category', $validated['category'])
+                ->where('name', $validated['brand'])
+                ->where('description', $description)
+                ->exists();
+
+            if ($exists) {
+                return back()
+                    ->withErrors(['brand' => 'Monitor dengan merk, resolusi, dan ukuran ini sudah ada.'])
+                    ->withInput();
+            }
+
+            // Simpan data baru
+            $inventory = Inventory::create([
+                'category'       => $validated['category'],
+                'name'           => $validated['brand'],
+                'description'    => $description,
+                'total_quantity' => 0 // awalnya 0, nanti bertambah kalau inventory_items dibuat
+            ]);
+
+            return redirect()->route('inventories.index')
+                ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been added to the inventory.");
+        }
+
+        if ($request->category === 'Other') {
+            // Validasi input
+            $validated = $request->validate([
+                'category'    => ['required', Rule::in(Inventory::CATEGORIES)],
+                'name'        => 'required|string',
+                'description' => 'nullable|string',
             ]);
 
             $description = $validated['description'] ?? '';
 
-            // Cek apakah item sudah ada
-            $existing = \App\Models\Inventory::where('item_type_id', $validated['item_type_id'])
+            // Cek apakah barang sudah ada di kategori "Other"
+            $exists = Inventory::where('category', $validated['category'])
                 ->where('name', $validated['name'])
                 ->where('description', $description)
-                ->first();
+                ->exists();
 
-            if ($existing) {
-                $existing->increment('stock', $validated['stock'] ?? 0);
-
-                return redirect()->route('inventories.index')
-                    ->with('success', "<strong>{$existing->name} - {$existing->description}</strong> stock has been increased.");
+            if ($exists) {
+                return back()
+                    ->withErrors(['name' => 'Barang dengan nama dan deskripsi ini sudah ada di kategori Other.'])
+                    ->withInput();
             }
 
-            // Jika belum ada, buat baru
-            $inventory = new \App\Models\Inventory();
-            $inventory->item_type_id = $validated['item_type_id'];
-            $inventory->name = $validated['name'];
-            $inventory->description = $description;
-            $inventory->stock = $validated['stock'];
-            $inventory->save();
+            // Simpan data baru
+            $inventory = Inventory::create([
+                'category'       => $validated['category'],
+                'name'           => $validated['name'],
+                'description'    => $description,
+                'total_quantity' => 0 // awalnya 0, bertambah kalau ada inventory_items
+            ]);
 
             return redirect()->route('inventories.index')
                 ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been added to the inventory.");
@@ -356,29 +328,29 @@ class InventoryController extends Controller
      */
     public function edit(Inventory $inventory)
     {
-        if ($inventory->itemType->name === 'Disk Drive') {
+        if ($inventory->category === 'Disk Drive') {
             [$size, $type] = explode(' - ', str_replace(' GB', '', $inventory->description));
             $inventory->size = $size;
             $inventory->type = $type;
         }
 
-        if ($inventory->itemType->name === 'Processor') {
+        if ($inventory->category === 'Processor') {
             [$model, $frequency] = explode(' - ', str_replace(' GHz', '', $inventory->description));
             $inventory->model = $model;
             $inventory->frequency = $frequency;
         }
 
-        if ($inventory->itemType->name === 'VGA') {
+        if ($inventory->category === 'VGA') {
             $inventory->size = (int) str_replace(' GB', '', $inventory->description);
         }
 
-        if ($inventory->itemType->name === 'RAM') {
+        if ($inventory->category === 'RAM') {
             $parts = explode(' - ', $inventory->description);
             $inventory->size = isset($parts[0]) ? (int) str_replace(' GB', '', $parts[0]) : null;
             $inventory->type = $parts[1] ?? null;
         }
 
-        if ($inventory->itemType->name === 'Monitor') {
+        if ($inventory->category === 'Monitor') {
             $parts = explode(' - ', $inventory->description);
             $inventory->resolution = $parts[0] ?? null;
             $inventory->inch = isset($parts[1]) ? (float) str_replace(' inch', '', $parts[1]) : null;
@@ -392,95 +364,80 @@ class InventoryController extends Controller
      */
     public function update(Request $request, Inventory $inventory)
     {
-        $itemType = $inventory->itemType;
-
-        if (!$itemType) {
-            return back()->withErrors(['item_type_id' => 'Item type tidak ditemukan.']);
-        }
-
-        if ($itemType->name === 'Computer') {
+        if ($inventory->category === 'Computer') {
             $validated = $request->validate([
                 'brand' => 'required|string',
                 'model' => 'nullable|string',
-                'stock' => 'nullable|integer|min:0',
             ]);
 
             $inventory->name = $validated['brand'];
             $inventory->description = $validated['model'];
         }
 
-        elseif ($itemType->name === 'Disk Drive') {
+        elseif ($inventory->category === 'Disk Drive') {
             $validated = $request->validate([
                 'brand' => 'required|string',
                 'type'  => 'nullable|string|in:HDD,SSD',
                 'size'  => 'nullable|integer|min:1',
-                'stock' => 'nullable|integer|min:0',
             ]);
 
             $inventory->name = $validated['brand'];
             $inventory->description = "{$validated['size']} GB - {$validated['type']}";
         }
 
-        elseif ($itemType->name === 'Processor') {
+        elseif ($inventory->category === 'Processor') {
             $validated = $request->validate([
                 'type'      => 'required|string',
                 'model'     => 'nullable|string',
                 'frequency' => 'nullable|numeric|min:0.1',
-                'stock'     => 'nullable|integer|min:0',
             ]);
 
             $inventory->name = $validated['type'];
             $inventory->description = "{$validated['model']} - {$validated['frequency']} GHz";
         }
 
-        elseif ($itemType->name === 'VGA') {
+        elseif ($inventory->category === 'VGA') {
             $validated = $request->validate([
                 'brand' => 'required|string',
                 'size'  => 'required|integer|min:1',
-                'stock' => 'nullable|integer|min:0',
             ]);
 
             $inventory->name = $validated['brand'];
             $inventory->description = "{$validated['size']} GB";
         }
 
-        elseif ($itemType->name === 'RAM') {
+        elseif ($inventory->category === 'RAM') {
             $validated = $request->validate([
                 'brand' => 'required|string',
                 'size'  => 'nullable|integer|min:1',
                 'type'  => 'nullable|string',
-                'stock' => 'nullable|integer|min:0',
             ]);
 
             $inventory->name = $validated['brand'];
             $inventory->description = "{$validated['size']} GB - {$validated['type']}";
         }
 
-        elseif ($itemType->name === 'Monitor') {
+        elseif ($inventory->category === 'Monitor') {
             $validated = $request->validate([
                 'brand'      => 'required|string',
                 'resolution' => 'nullable|string',
                 'inch'       => 'nullable|integer|min:1',
-                'stock'      => 'nullable|integer|min:0',
             ]);
 
             $inventory->name = $validated['brand'];
             $inventory->description = "{$validated['resolution']} - {$validated['inch']} inch";
         }
 
-        elseif ($itemType->name === 'Other Items') {
+        elseif ($inventory->category === 'Other') {
             $validated = $request->validate([
                 'name'        => 'required|string',
                 'description' => 'nullable|string',
-                'stock'       => 'nullable|integer|min:0',
             ]);
 
             $inventory->name = $validated['name'];
             $inventory->description = $validated['description'];
         }
 
-        // Update stock for all cases
-        $inventory->stock = $validated['stock'] ?? 0;
         $inventory->save();
 
         return redirect()->route('inventories.index')
@@ -496,5 +453,99 @@ class InventoryController extends Controller
 
         return redirect()->route('inventories.index')
         ->with('success', "<strong>{$inventory->name} - {$inventory->description}</strong> has been removed from the inventory.");
+    }
+
+
+    /**
+     * Tampilkan detail inventory beserta unit barangnya
+     */
+    public function show(Inventory $inventory)
+    {
+        $items = $inventory->items()
+            ->orderBy('id')
+            ->paginate(10); // sesuaikan jumlah per halaman
+
+        return view('inventories.show', [
+            'inventory' => $inventory,
+            'items' => $items
+        ]);
+    }
+
+    public function createItem(Inventory $inventory)
+    {
+        return view('inventories.items.create', [
+            'inventory' => $inventory
+        ]);
+    }
+
+    public function storeItem(Request $request, Inventory $inventory)
+    {
+        $validated = $request->validate([
+            'serial_number' => 'nullable|string|max:255',
+            'condition_status' => 'required|in:Baik,Perlu Perbaikan,Rusak',
+            'qr_code' => 'nullable|string|max:255',
+        ]);
+
+        $validated['inventory_id'] = $inventory->id;
+        $validated['last_checked_at'] = now();
+        $validated['last_checked_by'] = auth()->id();
+
+        InventoryItem::create($validated);
+
+        // Update total_quantity
+        $inventory->increment('total_quantity');
+
+        return redirect()->route('inventories.show', $inventory->id)
+            ->with(
+                'success',
+                '<strong>' . e($inventory->name) . ' ' . e($inventory->description) . '</strong> - <strong>' . e($validated['serial_number']) . '</strong> berhasil ditambahkan.'
+            );
+    }
+
+    public function editItem(Inventory $inventory, InventoryItem $item)
+    {
+        return view('inventories.items.edit', [
+            'inventory' => $inventory,
+            'item' => $item
+        ]);
+    }
+
+    public function updateItem(Request $request, Inventory $inventory, InventoryItem $item)
+    {
+        $validated = $request->validate([
+            'serial_number' => 'nullable|string|max:255',
+            'condition_status' => 'required|in:Baik,Perlu Perbaikan,Rusak',
+            'qr_code' => 'nullable|string|max:255',
+        ]);
+
+        $validated['last_checked_at'] = now();
+        $validated['last_checked_by'] = auth()->id();
+        $item->update($validated);
+
+        return redirect()->route('inventories.show', $inventory->id)
+            ->with(
+                'success',
+                '<strong>' . e($inventory->name) . ' ' . e($inventory->description) . '</strong> - <strong>' . e($validated['serial_number']) . '</strong> berhasil diperbarui.'
+            );
+    }
+
+    public function destroyItem(Inventory $inventory, InventoryItem $item)
+    {
+        // Pastikan item memang milik inventory ini
+        if ($item->inventory_id !== $inventory->id) {
+            abort(404);
+        }
+
+        // Hapus item
+        $item->delete();
+
+        // Kurangi total_quantity
+        $inventory->decrement('total_quantity');
+
+        return redirect()->route('inventories.show', $inventory->id)
+            ->with(
+                'success',
+                '<strong>' . e($inventory->name) . ' ' . e($inventory->description) . '</strong> - <strong>' . e($item->serial_number) . '</strong> berhasil dihapus.'
+            );
     }
 }
