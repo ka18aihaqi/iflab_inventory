@@ -23,8 +23,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             // LocationSeeder::class,
-            InventoriesSeeder::class,
-            InventoryItemSeeder::class,
+            // InventoriesSeeder::class,
+            // InventoryItemSeeder::class,
         ]);
     }
 }

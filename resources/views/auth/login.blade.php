@@ -220,7 +220,7 @@
         </div> --}}
 
         <div class="footer-text">
-            &copy; 2025 Informatics Labs Inventory
+            &copy; 2025 Informatics Laboratory
         </div>
     </div>
 

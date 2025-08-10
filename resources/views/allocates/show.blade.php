@@ -100,7 +100,7 @@
                     </div>
 
                     @if(Auth::check())
-                        <div class="flex justify-between mt-2 gap-2">
+                        <div class="flex justify-center mt-2 gap-2">
                             {{-- <a href="{{ route('allocates.hardware.edit', $allocateHardware->id) }}"
                             class="update-btn bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-1.5 px-4 rounded-lg transition">
                                 <i class="fas fa-edit mr-1"></i> Update
