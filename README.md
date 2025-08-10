@@ -1,6 +1,6 @@
 <p align="center">
   <a href="#" target="_blank">
-    <img src="/public/assets/screenshots/logo-iflab" width="300" alt="Sistem Inventaris Logo" />
+    <img src="/public/assets/screenshots/logo-iflab.png" width="300" alt="Sistem Inventaris Logo" />
   </a>
 </p>
 
