@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
 
     // Audit Logs
     Route::get('/auditlogs', [AuditLogController::class, 'index'])->name('auditlogs.index');
+    Route::get('/auditlogs/download', [AuditLogController::class, 'downloadTxt'])->name('auditlogs.download');
 
     // Users
     Route::resource('users', UserController::class);

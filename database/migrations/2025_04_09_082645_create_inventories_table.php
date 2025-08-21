@@ -49,6 +49,7 @@ return new class extends Migration
             $table->foreignId('inventory_id')->constrained('inventories')->onDelete('cascade');
             $table->string('serial_number')->nullable();
             $table->enum('condition_status', ['Baik', 'Perlu Perbaikan', 'Rusak'])->default('Baik');
+            $table->date('received_date')->nullable();
             $table->timestamp('last_checked_at')->nullable();
             $table->foreignId('last_checked_by')->nullable()->constrained('users')->nullOnDelete();
             $table->enum('status_allocate', ['available', 'allocated'])->default('available');
@@ -112,7 +113,7 @@ return new class extends Migration
         // =============================
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
             $table->string('action'); // CREATE, UPDATE, DELETE
             $table->string('table_name');
             $table->unsignedBigInteger('record_id');

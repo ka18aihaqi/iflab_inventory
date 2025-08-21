@@ -459,15 +459,29 @@ class InventoryController extends Controller
     /**
      * Tampilkan detail inventory beserta unit barangnya
      */
-    public function show(Inventory $inventory)
+    public function show(Inventory $inventory, Request $request)
     {
-        $items = $inventory->items()
-            ->orderBy('id')
-            ->paginate(10); // sesuaikan jumlah per halaman
+        $search = $request->input('search');
+
+        $itemsQuery = $inventory->items()->orderBy('id');
+
+        if ($search) {
+            $itemsQuery->where(function ($q) use ($search) {
+                $q->where('serial_number', 'like', "%{$search}%")
+                ->orWhere('condition_status', 'like', "%{$search}%")
+                ->orWhere('last_checked_at', 'like', "%{$search}%")
+                ->orWhere('status_allocate', 'like', "%{$search}%")
+                ->orWhereHas('inventory', function($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $items = $itemsQuery->paginate(10)->appends(['search' => $search]);
 
         return view('inventories.show', [
             'inventory' => $inventory,
-            'items' => $items
+            'items' => $items,
         ]);
     }
 
@@ -483,7 +497,7 @@ class InventoryController extends Controller
         $validated = $request->validate([
             'serial_number' => 'nullable|string|max:255',
             'condition_status' => 'required|in:Baik,Perlu Perbaikan,Rusak',
-            'qr_code' => 'nullable|string|max:255',
+            'received_date' => 'required|date',
         ]);
 
         $validated['inventory_id'] = $inventory->id;
@@ -516,6 +530,7 @@ class InventoryController extends Controller
             'serial_number' => 'nullable|string|max:255',
             'condition_status' => 'required|in:Baik,Perlu Perbaikan,Rusak',
             'qr_code' => 'nullable|string|max:255',
+            'received_date' => 'required|date',
         ]);
 
         $validated['last_checked_at'] = now();

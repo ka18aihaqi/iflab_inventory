@@ -34,6 +34,20 @@
                             <h6 class="m-0">{{ $inventory->category }} - {{ $inventory->name }} {{ $inventory->description }}</h6>
                         </div>
 
+                        <!-- Search -->
+                        <form method="GET" action="{{ route('inventories.show', ['inventory' => $inventory->id]) }}" class="relative flex items-center transition-all rounded-lg ease-soft w-64">
+                            <span class="text-sm ease-soft leading-5.6 absolute z-50 left-2 flex h-full items-center whitespace-nowrap rounded-lg rounded-tr-none rounded-br-none border border-r-0 border-transparent bg-transparent py-2 px-2.5 text-center font-normal text-slate-500 transition-all">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input 
+                                type="text" 
+                                name="search"
+                                value="{{ request('search') }}"
+                                class="pl-8.75 text-sm focus:shadow-soft-blue-custom ease-soft w-full leading-5.6 relative block min-w-0 flex-auto rounded-lg border border-solid border-gray-300 bg-white bg-clip-padding py-2 pr-3 text-gray-700 transition-all placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:transition-shadow" 
+                                placeholder="Type here..." 
+                            />
+                        </form>
+
                         <!-- Kanan: Add Button -->
                         <a href="{{ route('inventories.items.create', $inventory->id) }}" 
                         class="add-btn flex items-center text-sm text-green-500 hover:underline">
@@ -58,6 +72,7 @@
                                 <th class="w-[50px] px-2 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs tracking-none whitespace-nowrap text-slate-400 opacity-70">No</th>
                                 <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Serial Number</th>
                                 <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Condition</th>
+                                <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Received Date</th>
                                 <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Last Checked By</th>
                                 <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Last Checked At</th>
                                 <th class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">Status Allocation</th>
@@ -77,6 +92,9 @@
                                     <span class="text-xs font-semibold leading-tight text-slate-400">{{ $item->condition_status }}</span>
                                 </td>
                                 <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
+                                    <span class="text-xs font-semibold leading-tight text-slate-400">{{ $item->received_date }}</span>
+                                </td>
+                                <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
                                     <span class="text-xs font-semibold leading-tight text-slate-400">{{ $item->lastCheckedBy?->username ?? '-' }}</span>
                                 </td>
                                 <td class="p-2 align-middle bg-transparent border-b whitespace-nowrap shadow-transparent">
@@ -93,9 +111,9 @@
                                 </td>
                                 <td class="p-2 align-middle text-center bg-transparent border-b whitespace-nowrap shadow-transparent">
                                     <div class="flex justify-center items-center">
-                                        <a href="{{ route('inventories.show', $item->id) }}" class="text-blue-500 hover:text-blue-800 text-base transition duration-200 transform hover:scale-110 mr-2" title="Show">
+                                        {{-- <a href="{{ route('inventories.show', $item->id) }}" class="text-blue-500 hover:text-blue-800 text-base transition duration-200 transform hover:scale-110 mr-2" title="Show">
                                             <i class="fas fa-eye align-middle"></i>
-                                        </a>
+                                        </a> --}}
                                         <a href="{{ route('inventories.items.edit', [$inventory->id, $item->id]) }}"
                                         class="text-yellow-500 hover:text-yellow-600 text-base transition duration-200 transform hover:scale-110 mr-2"
                                         title="Edit">
@@ -123,6 +141,42 @@
                             @endforelse
                         </tbody>
                     </table>
+                    @if ($items->hasPages())
+                        <nav class="flex items-center justify-center space-x-1 mt-4 text-sm">
+                            {{-- Previous Page Link --}}
+                            @if ($items->onFirstPage())
+                                <span class="px-2 py-0.5 border rounded text-gray-400 mx-2 transition duration-200 transform">&lt;</span>
+                            @else
+                                <a href="{{ $items->appends(['date' => request('date')])->previousPageUrl() }}"
+                                class="px-2 py-0.5 border rounded hover:bg-gray-100 mx-1 transition duration-200 transform hover:scale-105">&lt;</a>
+                            @endif
+
+                            {{-- Custom Pagination Elements --}}
+                            @php
+                                $currentPage = $items->currentPage();
+                                $lastPage = $items->lastPage();
+                                $start = max(1, $currentPage - 1);
+                                $end = min($lastPage, $currentPage + 1);
+                            @endphp
+
+                            @for ($page = $start; $page <= $end; $page++)
+                                @if ($page == $currentPage)
+                                    <span class="px-2 py-0.5 bg-yellow-500 text-white rounded mx-2 transition duration-200 transform hover:scale-105">{{ $page }}</span>
+                                @else
+                                    <a href="{{ $items->appends(['date' => request('date')])->url($page) }}"
+                                    class="px-2 py-0.5 border rounded hover:bg-gray-100 mx-2 transition duration-200 transform hover:scale-105">{{ $page }}</a>
+                                @endif
+                            @endfor
+
+                            {{-- Next Page Link --}}
+                            @if ($items->hasMorePages())
+                                <a href="{{ $items->appends(['date' => request('date')])->nextPageUrl() }}"
+                                class="px-2 py-0.5 border rounded hover:bg-gray-100 mx-2 transition duration-200 transform hover:scale-105">&gt;</a>
+                            @else
+                                <span class="px-2 py-0.5 border rounded text-gray-400 mx-2 transition duration-200 transform">&gt;</span>
+                            @endif
+                        </nav>
+                    @endif
                     </div>
                 </div>
             </div>

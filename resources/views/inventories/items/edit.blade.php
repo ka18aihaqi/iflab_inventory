@@ -69,6 +69,19 @@
                                 </div>
                             </div>
 
+                            <div class="flex gap-x-6 mb-4">
+                                {{-- Received Date --}}
+                                <div class="w-1/2 px-1">
+                                    <label for="received_date" class="block text-sm font-medium text-slate-700">
+                                        Tanggal Barang Masuk
+                                    </label>
+                                    <input type="date" id="received_date" name="received_date"
+                                        value="{{ old('received_date', $item->received_date ? \Carbon\Carbon::parse($item->received_date)->format('Y-m-d') : '') }}"
+                                        class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none px-3 py-2 text-sm text-slate-800"
+                                        required>
+                                </div>
+                            </div>
+
                             {{-- Submit --}}
                             <div class="pt-2 mt-4 flex justify-end">
                                 <button type="submit" class="add-btn">

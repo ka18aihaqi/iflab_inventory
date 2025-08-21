@@ -52,6 +52,7 @@
                                         class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none px-3 py-2 text-sm text-slate-800"
                                         placeholder="e.g., SN12345XYZ">
                                 </div>
+
                                 {{-- Kondisi Status --}}
                                 <div class="w-1/2 px-1">
                                     <label for="condition_status" class="block text-sm font-medium text-slate-700">
@@ -63,6 +64,19 @@
                                         <option value="Perlu Perbaikan">Perlu Perbaikan</option>
                                         <option value="Rusak">Rusak</option>
                                     </select>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-x-6 mb-4">
+                                {{-- Received Date --}}
+                                <div class="w-1/2 px-1">
+                                    <label for="received_date" class="block text-sm font-medium text-slate-700">
+                                        Tanggal Barang Masuk
+                                    </label>
+                                    <input type="date" id="received_date" name="received_date"
+                                        value="{{ old('received_date') }}"
+                                        class="mt-1 block w-full rounded-lg border border-slate-200 shadow-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none px-3 py-2 text-sm text-slate-800"
+                                        required>
                                 </div>
                             </div>
 
