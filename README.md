@@ -72,7 +72,7 @@ Sistem inventaris modern untuk laboratorium yang memudahkan pengelolaan aset men
 
 Jika menemukan masalah atau ingin berkontribusi, silakan buka issue atau pull request di GitHub.
 
-Untuk diskusi lebih lanjut, hubungi saya di [ka18aihaqi@domain.com].
+Untuk diskusi lebih lanjut, hubungi saya di [ka18aihaqi@gmail.com].
 
 ---
 
